@@ -8,12 +8,11 @@ test:p3:
 pages:
   stage: deploy
   script:
-    - cd pages/
     - mkdir .public
-    - cp -r * .public
+    - cp -r pages/* .public
     - mv .public public
   artifacts:
     paths:
-      - pages
+      - public
   only:
     - master
