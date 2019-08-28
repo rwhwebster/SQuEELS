@@ -6,13 +6,12 @@ test:p3:
 
 
 pages:
+  image: alpine:latest
   stage: deploy
   script:
-    - mkdir .public
-    - cp -r pages/* .public
-    - mv .public public
+    - echo 'Nothing to do...'
   artifacts:
     paths:
-      - public
+      - pages
   only:
     - master
