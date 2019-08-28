@@ -1,0 +1,19 @@
+test:p3:
+  image: ubuntu:18.04
+  script:
+    - export DEBIAN_FRONTEND=noninteractive
+    - apt-get update -qy
+
+
+pages:
+  stage: deploy
+  script:
+    - cd pages/
+    - mkdir .public
+    - cp -r * .public
+    - mv .public public
+  artifacts:
+    paths:
+      - public
+  only:
+    - master
