@@ -1,4 +1,5 @@
 test:p3:
+  stage: test
   image: ubuntu:18.04
   script:
     - export DEBIAN_FRONTEND=noninteractive
