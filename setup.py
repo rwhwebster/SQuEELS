@@ -27,6 +27,7 @@ def find_version(*file_paths):
     setup(name='SQuEELS',
         version=find_version("SQuEELS", "__init__.py"),
         description="Standard-based Quantification of EELS (SQuEELS) data.",
+        long_description='A package for elemental quantification of EELS core loss edges using reference standard spectra.',
         classifiers=[
         'Programming Language :: Python :: 3',
         'Topic :: Scientific/Engineering :: Physics',
@@ -42,12 +43,13 @@ def find_version(*file_paths):
         author_email='rwhwebster@gmail.com',
         license='GPL v3',
         packages=['SQuEELS'],
-        package_data={'SQuEELS': []},
+        #package_data={'SQuEELS': []},
         install_requires=[
         'numpy',
         'scipy',
         'hyperspy',
         ],
         python_requires='>=3.6',
-        include_package_data=True,
-        zip_safe=True)
+        #include_package_data=True,
+        #zip_safe=True,
+        )
