@@ -1,0 +1,15 @@
+*.pyc
+*.py~
+*.txt~
+*.yml~
+*.gitignore~
+__pycache__/
+*.swp
+.cache
+*.egg-info
+*.md~
+dist
+build
+fpd.egg-info
+_build
+*.rst~

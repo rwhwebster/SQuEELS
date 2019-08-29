@@ -40,10 +40,13 @@ def find_version(*file_paths):
         url='http://gitlab.com/rwebster/SQuEELS',
         author='Robert Webster',
         author_email='rwhwebster@gmail.com',
+        license='GPL v3',
         packages=['SQuEELS'],
+        package_data={'SQuEELS': []},
         install_requires=[
         'numpy',
         'scipy',
         'hyperspy',
         ],
+        include_package_data=True,
         zip_safe=True)
