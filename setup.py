@@ -1,6 +1,7 @@
 from setuptools import setup
 import codecs
 import os
+import sys
 import re
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -38,7 +39,7 @@ def find_version(*file_paths):
         'TEM',
         'EELS',
         ],
-        url='http://gitlab.com/rwebster/SQuEELS',
+        url='http://gitlab.com/rwebster/SQuEELS/',
         author='Robert Webster',
         author_email='rwhwebster@gmail.com',
         license='GPL v3',
