@@ -48,5 +48,6 @@ def find_version(*file_paths):
         'scipy',
         'hyperspy',
         ],
+        python_requires='>=3.6',
         include_package_data=True,
         zip_safe=True)

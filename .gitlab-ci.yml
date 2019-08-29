@@ -3,7 +3,7 @@ test:p3:
   script:
     - export DEBIAN_FRONTEND=noninteractive
     - apt-get update -qy
-    - apt-get install -y python3-dev python3-pip python3-numpy python3-scipy python3-matplotlib xvfb
+    - apt-get install -y python3-dev python3-pip python3-numpy python3-scipy python3-matplotlib xvfb python4-setuptools python3-psutil
     - pip3 install hyperspy==1.5.1
     - pip3 install --user .
 
