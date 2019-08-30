@@ -113,25 +113,23 @@ def clip_LL(s, reg):
     return clip
 
 
-def model_zero_loss(s):
+def extract_ZLP(s):
     '''
+    Examines spectrum s for zero-loss peak and returns a dataset of the same
+    dimensions, but which only contains the ZLP.
 
+    Parameters
+    ----------
+    s : hyperspy spectrum object
+        Must be a low-loss spectrum which contains the 0eV channel.
+
+    Returns
+    -------
+    ZLP : hyperspy spectrum object
+        spectrum identical to s, but data contains only the extracted zero-loss
+        peak.
     '''
-
-
-
-    return model
-
-
-def clone_ZLP(s):
-    '''
-
-    '''
-
-    ZLP = s.deepcopy()
-
-
-
+    
     return ZLP
 
 
