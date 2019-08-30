@@ -1,6 +1,7 @@
 import sys
 
-__version__ = '0.0.1'
+name = "SQuEELS"
+__version__ = '0.1.1'
 
 
 # python version

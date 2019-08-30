@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 import codecs
 import os
 import sys
@@ -25,32 +25,35 @@ def find_version(*file_paths):
         return version_match.group(1)
     raise RuntimeError("Unable to find version string.")
 
-    setup(name='SQuEELS',
-        version=find_version("SQuEELS", "__init__.py"),
-        description="Standard-based Quantification of EELS (SQuEELS) data.",
-        long_description='A package for elemental quantification of EELS core loss edges using reference standard spectra.',
-        classifiers=[
+setup(
+    name='SQuEELS',
+    version=find_version("SQuEELS", "__init__.py"),
+    description="Standard-based Quantification of EELS (SQuEELS) data.",
+    long_description='A package for elemental quantification of EELS core loss edges using reference standard spectra.',
+    classifiers=[
         'Programming Language :: Python :: 3',
         'Topic :: Scientific/Engineering :: Physics',
-        ],
-        keywords=[
+    ],
+    keywords=[
         'microscopy',
         'STEM',
         'TEM',
         'EELS',
-        ],
-        url='http://gitlab.com/rwebster/SQuEELS/',
-        author='Robert Webster',
-        author_email='rwhwebster@gmail.com',
-        license='GPL v3',
-        packages=['SQuEELS'],
-        #package_data={'SQuEELS': []},
-        install_requires=[
+    ],
+    url='http://gitlab.com/rwebster/SQuEELS/',
+    author='Robert Webster',
+    author_email='rwhwebster@gmail.com',
+    license='GPL v3',
+    packages=['SQuEELS'],
+    #package_data={'SQuEELS': []},
+    install_requires=[
         'numpy',
         'scipy',
         'hyperspy',
-        ],
-        python_requires='>=3.6',
-        #include_package_data=True,
-        #zip_safe=True,
-        )
+        'pymc3',
+        'matplotlib',
+    ],
+    python_requires='>=3.6',
+    #include_package_data=True,
+    zip_safe=False,
+    )

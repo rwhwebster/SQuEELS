@@ -6,3 +6,6 @@ import scipy as sp
 import matplotlib.pyplot as plt
 plt.ion()
 
+def test_proc(a):
+    return a
+    
