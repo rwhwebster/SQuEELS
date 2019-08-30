@@ -8,6 +8,6 @@ import pymc3 as pm
 import matplotlib.pyplot as plt
 plt.ion()
 
-def test_quant(a):
+def dummy_quant(a):
     return a
     

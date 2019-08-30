@@ -8,6 +8,6 @@ import scipy as sp
 import matplotlib.pyplot as plt
 plt.ion()
 
-def test_func():
-    return True
+def dummy_tool(a):
+    return a
     
