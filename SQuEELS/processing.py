@@ -152,14 +152,14 @@ def match_spectra_sizes(s1, s2):
     Returns
     -------
     o1, o2 : 
-    
+
     '''
     l1 = len(s1.data)
     l2 = len(s2.data)
     # Determine the smallest 2^N that satisfies the sizes of both inputs
     n1 = int(np.ceil(np.log2(l1)))
     n2 = int(np.ceil(np.log2(l2)))
-    N = max(n1,n2)
+    N = max(n1,n2) + 2
 
     k = pow(2, N)
 
