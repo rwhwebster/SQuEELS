@@ -32,7 +32,7 @@ def make_hann_window(dims, side, direction=0):
         array containing the hanning window
     '''
     window = np.zeros(dims)
-
+    # This is a teeny-tiny amount of future-proofing
     if isinstance(dims, int):
         dims = (dims,)
 
@@ -101,3 +101,39 @@ def extract_ZLP(s, plot=False):
     ZLP.data = fitted
 
     return ZLP
+
+def pad_spectrum(s, nLen, method='hann'):
+    '''
+    Pads the high energy-loss end of the spectrum to match the given length
+    and fills the new data by given method.
+
+    Parameters
+    ----------
+    s : 
+        Spectrum to be expanded
+    nLen : int
+        Length of spectrum once padded
+    method : str
+        Currently, 'hann' is only available method.
+
+    Returns
+    -------
+    out : 
+        The extended spectrum
+    '''
+    out = s.deepcopy()
+    oLen = s.axes_manager[0].size
+    out.axes_manager[0].size = nLen
+    # Determine amplitide of high-loss tail of spectrum
+    a0 = np.mean(s.data[-20:])
+    # Create data to fill pad.
+    # TODO Generalise to make other methods implementable
+    vals = make_hann_window(nLen-oLen, 'right')
+    vals *= a0
+    # Update data in out
+    out.data = np.zeros((nLen))
+    out.data[:oLen] = s.data
+    out.data[oLen:] = vals
+
+    return out
+
