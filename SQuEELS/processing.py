@@ -167,3 +167,20 @@ def match_spectra_sizes(s1, s2):
     o2 = pad_spectrum(s2, k)
 
     return o1, o2
+
+def remove_stray_signal(s):
+    '''
+    Method for identifying and removing stray signal under the low-loss
+    spectrum.  Stray signal manifests as intensity before the zero-loss peak.
+
+    Parameters
+    ----------
+    s :
+    
+    Returns
+    -------
+    out :
+
+    '''
+
+    return out
