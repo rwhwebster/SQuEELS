@@ -52,6 +52,7 @@ setup(
         'hyperspy',
         'pymc3',
         'matplotlib',
+        'lmfit',
     ],
     python_requires='>=3.6',
     #include_package_data=True,
