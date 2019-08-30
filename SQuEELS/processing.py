@@ -168,7 +168,7 @@ def match_spectra_sizes(s1, s2):
 
     return o1, o2
 
-def remove_stray_signal(s):
+def remove_stray_signal(s, reg):
     '''
     Method for identifying and removing stray signal under the low-loss
     spectrum.  Stray signal manifests as intensity before the zero-loss peak.
@@ -176,11 +176,21 @@ def remove_stray_signal(s):
     Parameters
     ----------
     s :
-    
+
     Returns
     -------
     out :
 
     '''
+    # Create a rough method first of all
+    xo = s.axes_manager[0].offset
+    xs = s.axes_manager[0].scale
+    xp = abs(xo/xs) # Channel position of zero energy
+    # 
+    offset = np.mean(s.data[0:int(reg*xp)])
 
-    return out
+    clip = s - offset
+
+    clip.data[0:int(reg*xp)] = 0.0
+
+    return clip
