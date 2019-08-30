@@ -5,7 +5,7 @@ import scipy as sp
 
 from numpy.fft import fft, ifft
 
-from .processing import extract_ZLP, match_spectra_sizes
+from .processing import extract_ZLP, match_spectra_sizes, remove_stray_signal
 
 import matplotlib.pyplot as plt
 plt.ion()
@@ -47,8 +47,8 @@ def fourier_ratio_deconvolution(HL, LL, stray=False, pad=True, plot=False):
     HL_size = HL.axes_manager[0].size
     # Remove stray signal
     if stray:
-        # TODO
-        pass
+        temp = LL.copy()
+        LL = remove_stray_signal(temp, 0.8)
     # Pad spectra for size-matching and continuity at boundaries
     if pad:
         # TODO
@@ -104,8 +104,8 @@ def reverse_fourier_ratio_convoln(HL, LL, stray=False, pad=True, plot=False):
     HL_size = HL.axes_manager[0].size
     # Remove stray signal
     if stray:
-        # TODO
-        pass
+        temp = LL.copy()
+        LL = remove_stray_signal(temp, 0.8)
     # Pad spectra for size-matching and continuity at boundaries
     if pad:
         # TODO
