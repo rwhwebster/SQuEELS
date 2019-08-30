@@ -60,6 +60,11 @@ def extract_ZLP(s, plot=False):
     ZLP : hyperspy spectrum object
         spectrum identical to s, but data contains only the extracted zero-loss
         peak.
+
+    TODO
+    ----
+    Further testing on ZLPs of different dispersions. Confirm SkewedVoigtModel
+    is a good choice.
     '''
 
     # Spectrum must contain zero-channel
