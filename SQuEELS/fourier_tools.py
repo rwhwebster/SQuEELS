@@ -10,8 +10,6 @@ from .processing import extract_ZLP, match_spectra_sizes, remove_stray_signal
 import matplotlib.pyplot as plt
 plt.ion()
 
-def dummy_tool(a):
-    return a
 
 def fourier_ratio_deconvolution(HL, LL, stray=False, pad=True, plot=False):
     '''

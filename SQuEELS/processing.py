@@ -10,8 +10,6 @@ import hyperspy.api as hs
 import matplotlib.pyplot as plt
 plt.ion()
 
-def dummy_proc(a):
-    return a
     
 def make_hann_window(dims, side, direction=0):
     '''
