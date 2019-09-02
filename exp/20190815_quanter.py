@@ -8,6 +8,8 @@ import matplotlib.pylab as plt
 
 import hyperspy.api as hs
 
+import SQuEELS as sq
+
 plt.ion()
 
 # Load EELS Standards
@@ -86,7 +88,7 @@ def pad_spectra(s1, s2):
     # Determine smallest 2^N that satisfies the sizes of both inputs
     n1 = int(np.ceil(np.log2(l1)))
     n2 = int(np.ceil(np.log2(l2)))
-    N = max(n1,n2)
+    N = max(n1,n2)+2
 
     k = 2**N
 
@@ -113,28 +115,6 @@ def clip_LL(s, reg):
     return clip
 
 
-def model_zero_loss(s):
-    '''
-
-    '''
-
-
-
-    return model
-
-
-def clone_ZLP(s):
-    '''
-
-    '''
-
-    ZLP = s.deepcopy()
-
-
-
-    return ZLP
-
-
 def reverse_fourier_ratio(HL, LL):
     '''
     Function which works through fourier ratio deconvolution
@@ -144,17 +124,20 @@ def reverse_fourier_ratio(HL, LL):
 
     LL = clip_LL(LL, 0.8)
 
-    shift = HL.axes_manager[0].offset + LL.axes_manager[0].offset
+    shift = HL.axes_manager[0].offset
 
     low, high = pad_spectra(LL, HL)
 
-    I0 = low.estimate_elastic_scattering_intensity(threshold=0.1).data[0]
+    ZLP = extract_ZLP(low)
 
     # Calculate Fourier Transforms
     LLF = low.fft()
     HLF = high.fft()
+    ZLF = ZLP.fft()
 
-    conv = (HLF/I0)*LLF
+    # Perform Convolution
+    conv = (HLF*LLF)/ZLF
+    # Inverse fourier transform to get convolved spectrum
     reconv = conv.ifft()
 
     reconv.axes_manager[0].offset = shift # Correct energy scale

@@ -13,7 +13,8 @@ del(sys)
 __all__ = [
     'fourier_tools',
     'quantify',
-    'processing']
+    'processing',
+    'io']
 
 for x in __all__:
     exec('from . import %s' %(x))

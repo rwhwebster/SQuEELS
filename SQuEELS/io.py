@@ -1,0 +1,116 @@
+from __future__ import print_function
+
+import sys
+import os
+
+
+import numpy as np
+import scipy as sp
+
+import hyperspy.api as hs
+
+
+class Standards:
+    def __init__(self, fp=None, browse=True):
+        '''
+        Class to handle reference spectra from standard materials.
+        Class is designed to look in one folder that contains all standards
+        which the user may want to use.
+
+        Parameters
+        ----------
+        fp : str
+            If not None, this string is the location of the directory which
+            contains the standard spectra.
+
+        browse : Boolean
+            If true, a file broswer pops up for the user to choose the
+            directory where standards are stored.
+            This method is ignored if a filepath fp is provided.
+        
+        '''
+
+        if fp is None and browse is True:
+            from tkinter import filedialog
+            import tkinter as tk
+            root = tk.Tk()
+            root.withdraw()
+            fp = filedialog.askdirectory()
+        # Pull filenames from directory
+        files = [f for f in os.listdir(fp) if os.path.isfile(os.path.join(fp, f))]
+
+        # Load data into class
+        self.data = dict()
+        self.active = dict()
+        for file in files:
+            fn, ext = os.path.splitext(file)
+            if ext == '.dm3':
+                spectrum = hs.load(os.path.join(fp, file))
+                self.data[fn] = spectrum
+                self.active[fn] = False
+            else:
+                raise Exception('Unexpected file extension encountered. Expecting .dm3 files.')
+
+        # Does init need to do anything else?
+
+    def set_active_standards(self, names):
+        '''
+        Sets which standards are to be used in fits.
+        All standards are initially inactive by default.
+
+        Parameters
+        ----------
+        names : list of strings
+            List of names of standards which are to be made active.
+        '''
+        keys = self.active.keys()
+        for name in names:
+            if name in keys:
+                self.active[name] = True
+
+    def set_spectrum_range(self, start, end):
+        '''
+        Pads/crops reference spectra to match the data range to be used in 
+        the fit.
+
+        Parameters
+        ----------
+        start : float
+            The low energy-loss boundary of the fit in eV.
+            If this lies outside the data range of a standard, the spectrum
+            is padded with zeroes to fill the range.
+        end : float
+            The high energy-loss boundary of the fit in eV.
+            If this lies outside the data range of a standard, an exception
+            will be thrown.
+        '''
+
+        # Create a dictionary of standards which have been treated and ready
+        # for fitting
+        self.ready = dict()
+        # Iterate through all active standards
+        for ref in self.data:
+            if self.active[ref] is True:
+                spec = self.data[ref].deepcopy()
+                # First, crop from high energy-loss end
+                try:
+                    spec.crop(start=0, end=end, axis=0)
+                except:
+                    raise Exception('Something went wrong cropping the high-loss end.')
+                # Next, crop/pad low-loss end
+                offset = spec.axes_manager[0].offset
+                if start < offset:
+                    # Pad spectrum out
+                    nPad = int(np.round((offset - start)/spec.axes_manager[0].scale))
+                    new = np.zeros((nPad+spec.axes_manager[0].size))
+                    new[nPad:] = spec.data
+                    spec.data = new
+                    spec.axes_manager[0].offset = start
+                    spec.axes_manager[0].size = len(new)
+                else:
+                    # Crop spectrum down
+                    spec.crop(start=start, end=end, axis=0)
+                # Add spectrum to ready list
+                self.ready[ref] = spec
+
+
