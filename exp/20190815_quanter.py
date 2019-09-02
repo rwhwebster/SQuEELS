@@ -8,6 +8,8 @@ import matplotlib.pylab as plt
 
 import hyperspy.api as hs
 
+import SQuEELS as sq
+
 plt.ion()
 
 # Load EELS Standards
