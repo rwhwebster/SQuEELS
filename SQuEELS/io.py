@@ -113,4 +113,10 @@ class Standards:
                 # Add spectrum to ready list
                 self.ready[ref] = spec
 
+    def set_all_inactive(self):
+        '''
+        Sets all standards in library to active=False
+        '''
+        for item in self.active:
+            self.active[item] = False
 
