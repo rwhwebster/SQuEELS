@@ -10,5 +10,3 @@ Description Here
    :caption: Contents:
 
    install
-   loading standards
-   quantitative modelling
