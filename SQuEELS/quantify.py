@@ -68,3 +68,33 @@ def create_bayes_model(stds, comps, data, data_range, guess=1.0, plot=False):
 
     return model
 
+def fit_bayes_model(model=None, nDraws=1000, params=None, plot=False):
+    '''
+    Run Monte-Carlo chains on model and return fit results.
+
+    Parameters
+    ----------
+    model : pymc3 model
+        A model prepared using create_bayes_model
+    sample_params : dict
+        contains arguments to be passed to the sampling function
+        See pymc3.sample for arguments.
+    plot : boolean
+        If true, plot details of the final trace
+    Returns
+    -------
+
+    '''
+
+    if model is None:
+        raise Exception("model=None method does not exist.")
+
+    # Prepare parameters
+
+    with model:
+        trace = pm.sample(nDraws, **params)
+
+    if plot:
+        pm.traceplot(trace)
+
+    return trace
