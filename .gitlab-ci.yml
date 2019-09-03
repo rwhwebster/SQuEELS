@@ -7,14 +7,25 @@ test:p3:
     - apt-get install -y python3-dev python3-pip python3-numpy python3-scipy python3-matplotlib xvfb python3-setuptools python3-psutil
     - pip3 install hyperspy==1.5.1
     - pip3 install --user .
+    - xvfb-run python3 -m unittest discover -p test*.py ./
 
 
 
 pages:
+  image: ubuntu:18.04
   stage: deploy
   script:
-    - mkdir public
-    - cp -r pages/* public
+    - export DEBIAN_FRONTEND=noninteractive
+    - apt-get update -qy
+    - apt-get install -y python3-dev python3-pip python3-numpy python3-scipy python3-matplotlib xvfb python3-setuptools python3-psutil
+    - apt-get install -qy python3-sphinx python3-sphinx-rtd-theme build-essential
+    - pip3 install hyperspy==1.5.1
+    - pip3 install --user .
+    - sphinx-apidoc -fT -o ./pages ./SQuEELS/ ./SQuEELS/tests
+    - cd pages/
+    - make html
+    - cd ..
+    - mv pages/_build/html public
   artifacts:
     paths:
       - public

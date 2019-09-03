@@ -1,4 +1,4 @@
-SQuEELS v0.1.1
+SQuEELS v0.1.2
 ====
 
 About
