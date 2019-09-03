@@ -11,7 +11,7 @@ plt.ion()
 def dummy_quant(a):
     return a
     
-def create_bayes_model(stds, comps, data, data_range, guesses=1.0, plot=False):
+def create_bayes_model(stds, comps, data, data_range, guesses=(1.0,), LL=None, plot=False):
     '''
     Initialised a pymc3 model using the active standards library
 
@@ -27,6 +27,9 @@ def create_bayes_model(stds, comps, data, data_range, guesses=1.0, plot=False):
 
     guesses : tuple of floats
         
+    LL : Hyperspy spectrum object
+
+    plot : boolean
 
     Returns
     -------
@@ -46,6 +49,12 @@ def create_bayes_model(stds, comps, data, data_range, guesses=1.0, plot=False):
         raise Exception('Problem cropping observed data.')
     # If crop of data succeeds, apply same to active Standards
     stds.set_spectrum_range(data_range[0], data_range[1])
+    # If Low-loss is provided, convolve standards
+    if LL:
+        stds.convolve_ready(LL, kwargs={'stray':True})
+        stds.model = stds.conv
+    else:
+        stds.model = stds.ready
     # Create model
     with pm.Model() as model:
         beta = []
@@ -58,9 +67,9 @@ def create_bayes_model(stds, comps, data, data_range, guesses=1.0, plot=False):
 
         for i, comp in enumerate(comps):
             if mu is None:
-                mu = beta[i]*stds.ready[comp].data
+                mu = beta[i]*stds.model[comp].data
             else:
-                mu += beta[i]*stds.ready[comp].data
+                mu += beta[i]*stds.model[comp].data
 
         likelihood = pm.Normal('Y_obs', mu=mu, sigma=sigma, observed=Y.data)
 
