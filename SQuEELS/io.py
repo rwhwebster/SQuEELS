@@ -9,6 +9,8 @@ import scipy as sp
 
 import hyperspy.api as hs
 
+from .fourier_tools import reverse_fourier_ratio_convoln
+
 
 class Standards:
     def __init__(self, fp=None, browse=True):
@@ -120,3 +122,21 @@ class Standards:
         for item in self.active:
             self.active[item] = False
 
+    def convolve_ready(self, LL, kwargs=None):
+        '''
+        Convolve the prepared reference spectra with a low loss spectrum.
+
+        Paramters
+        ---------
+        LL : Hyperspy spectrum object
+            The low-loss spectrum the core-loss edges are to be convolved with   
+        kwargs : dict or None
+            keyword arguments for the convolution function.
+        '''
+        if not kwargs:
+            kwargs = {}
+
+        self.conv = dict()
+
+        for ref in self.ready:
+            self.conv[ref] = reverse_fourier_ratio_convoln(self.ready[ref], LL, **kwargs)
