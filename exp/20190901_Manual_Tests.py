@@ -24,12 +24,19 @@ refs.set_spectrum_range(350.0, 1050.0)
 
 test = refs.ready['Ti'].deepcopy()*0
 
-for comp in refs.ready:
-    test += refs.ready[comp]*10
+mult = 10
 
-new_model = sq.quantify.create_bayes_model(refs, ['Ti','Ni','Sn'], test, (400.0, 1000.0), guess=11.0, plot=True)
+for comp in refs.ready:
+    test += refs.ready[comp]*mult
+
+test += np.random.randn(len(test.data))*10
+
+new_model = sq.quantify.create_bayes_model(refs, ['Ti','Ni','Sn'], test, (400.0, 1000.0), guesses=(10.5,9.5,10.1), plot=True)
 
 map_estimate = pm.find_MAP(model=new_model)
+
+with new_model:
+    trace = pm.sample(500)
 
 with new_model:
     trace = pm.sample(1000, tune=1000, cores=4)
@@ -37,3 +44,5 @@ with new_model:
 with new_model:
     step = pm.Slice()
     trace = pm.sample(5000, step=step)
+
+sq.quantify.fit_bayes_model(model=new_model, nDraws=1000, params={'tune':1000, 'cores':4, 'chains':8}, plot=True)
