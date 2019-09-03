@@ -108,3 +108,62 @@ def fit_bayes_model(model=None, nDraws=1000, params=None, plot=False):
         pm.traceplot(trace)
 
     return trace
+
+def _normalEqn(X, y):
+    '''
+
+    '''
+    theta = np.zeros((X.shape[1], 1))
+
+    theta = np.dot(np.dot(np.linalg.inv(np.dot(X.T, X)), X.T), y)
+
+    return theta
+
+def normal_solver(stds, comps, data, data_range, LL=None, plot=False):
+    '''
+    Solve multivariate linear regression using matrix inversion.
+
+    Parameters
+    ----------
+    stds : 
+
+    comps : 
+
+    data : 
+
+    data_range : 
+
+    LL : 
+
+    plot : 
+    Returns
+    -------
+    theta : 
+    '''
+    # First, reset standards library
+    stds.set_all_inactive()
+    # Then use comps to specify which Standards are to be used
+    stds.set_active_standards(comps)
+    # Now, use the data range provided to set the fit range in the data
+    try:
+        Y = data.deepcopy()
+        Y.crop(start=data_range[0], end=data_range[1], axis=0)
+    except:
+        raise Exception('Problem cropping observed data.')
+    # If crop of data succeeds, apply same to active Standards
+    stds.set_spectrum_range(data_range[0], data_range[1])
+    # If Low-loss is provided, convolve standards
+    if LL:
+        stds.convolve_ready(LL, kwargs={'stray':True})
+        stds.model = stds.conv
+    else:
+        stds.model = stds.ready
+
+    # Build component matrix
+    comps = np.array([stds.model[comp].data for comp in stds.model]).T
+    y_obs = Y.data.T
+    # Now compute solution
+    theta = _normalEqn(comps, y_obs)
+
+    return theta
+
