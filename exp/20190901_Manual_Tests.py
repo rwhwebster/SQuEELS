@@ -46,3 +46,13 @@ with new_model:
     trace = pm.sample(5000, step=step)
 
 sq.quantify.fit_bayes_model(model=new_model, nDraws=1000, params={'tune':1000, 'cores':4, 'chains':8}, plot=True)
+
+
+# test fitting convolved spectrum
+
+HL = hs.load('/mnt/d/RWebster/Lab_Data/ARM/JH Bulk/20180521/Processing/high-loss (signal).dm3')
+
+LL = hs.load('/mnt/d/RWebster/Lab_Data/ARM/JH Bulk/20180521/Processing/1_EELS Spectrum Image (low-loss) (CorrE)(CorrI) (aligned).dm3')
+
+HLtest = HL.inav[17,8]
+LLtest = LL.inav[17,8]
