@@ -7,9 +7,6 @@ import pymc3 as pm
 
 import matplotlib.pyplot as plt
 plt.ion()
-
-def dummy_quant(a):
-    return a
     
 def create_bayes_model(stds, comps, data, data_range, guesses=(1.0,), LL=None, plot=False):
     '''
