@@ -114,12 +114,14 @@ def _normalEqn(X, y):
 
     '''
     theta = np.zeros((X.shape[1], 1))
-
-    theta = np.dot(np.dot(np.linalg.inv(np.dot(X.T, X)), X.T), y)
+    try:
+        theta = np.dot(np.dot(np.linalg.inv(np.dot(X.T, X)), X.T), y)
+    except:
+        raise Exception('Matrix inversion failed. Possible singular matrix.')
 
     return theta
 
-def normal_solver(stds, comps, data, data_range, LL=None, plot=False):
+def solo_normal_solver(stds, comps, data, data_range, LL=None, plot=False):
     '''
     Solve multivariate linear regression using matrix inversion.
 
@@ -160,10 +162,10 @@ def normal_solver(stds, comps, data, data_range, LL=None, plot=False):
         stds.model = stds.ready
 
     # Build component matrix
-    comps = np.array([stds.model[comp].data for comp in stds.model]).T
+    x_mat = np.array([stds.model[comp].data for comp in comps]).T
     y_obs = Y.data.T
     # Now compute solution
-    theta = _normalEqn(comps, y_obs)
+    theta = _normalEqn(x_mat, y_obs)
 
     return theta
 
