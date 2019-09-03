@@ -11,7 +11,7 @@ plt.ion()
 def dummy_quant(a):
     return a
     
-def create_bayes_model(stds, comps, data, data_range, guess=1.0, plot=False):
+def create_bayes_model(stds, comps, data, data_range, guesses=1.0, plot=False):
     '''
     Initialised a pymc3 model using the active standards library
 
@@ -24,6 +24,8 @@ def create_bayes_model(stds, comps, data, data_range, guess=1.0, plot=False):
     data : Hyperspy Spectrum Object
 
     data_range : tuple of floats
+
+    guesses : tuple of floats
         
 
     Returns
@@ -46,7 +48,9 @@ def create_bayes_model(stds, comps, data, data_range, guess=1.0, plot=False):
     stds.set_spectrum_range(data_range[0], data_range[1])
     # Create model
     with pm.Model() as model:
-        beta = pm.Normal('beta', mu=guess, sigma=1, shape=len(comps))
+        beta = []
+        for i, comp in enumerate(comps):
+            beta.append(pm.Normal(comp, mu=guesses[i], sigma=1))
         # sigma = pm.HalfNormal('sigma', sigma=1)
         sigma = pm.HalfCauchy('sigma', beta=10, testval=1.)
 
