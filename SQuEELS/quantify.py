@@ -114,10 +114,8 @@ def _normalEqn(X, y):
 
     '''
     theta = np.zeros((X.shape[1], 1))
-    try:
-        theta = np.dot(np.dot(np.linalg.inv(np.dot(X.T, X)), X.T), y)
-    except:
-        raise Exception('Matrix inversion failed. Possible singular matrix.')
+    
+    theta = np.dot(np.dot(np.linalg.pinv(np.dot(X.T, X)), X.T), y)
 
     return theta
 
