@@ -10,6 +10,7 @@ __pycache__/
 *.md~
 dist
 build
-fpd.egg-info
+SQuEELS.egg-info
 _build
 *.rst~
+man_tests
