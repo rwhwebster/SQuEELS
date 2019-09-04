@@ -3,9 +3,13 @@ from __future__ import print_function
 import numpy as np
 import scipy as sp
 
+# import numba
+# from numba import jit
+
 import matplotlib.pyplot as plt
 plt.ion()
 
+# @jit(nopython=True)
 def _normalEqn(X, y):
     '''
     Calculate solution to linear regression parameters by matrix inversion.
