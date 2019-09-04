@@ -2,7 +2,6 @@ from __future__ import print_function
 import unittest
 import numpy as np
 
-import SQuEELS
 import SQuEELS.quantify as sqq
 
 class TestQuantify(unittest.TestCase):

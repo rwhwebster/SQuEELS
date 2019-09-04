@@ -2,7 +2,6 @@ from __future__ import print_function
 import unittest
 import numpy as np
 
-import SQuEELS
 import SQuEELS.processing as sqp
 
 class TestQuantify(unittest.TestCase):
@@ -11,7 +10,7 @@ class TestQuantify(unittest.TestCase):
         glitch = np.ones(2048)
         glitch[:1024] += 0.1
         glitch[1024:] -= 0.1
-        corr = sqp.remedy_quadrant_glitch(glitch, gc=1024, width=10)
+        corr = sqp.remedy_quadrant_glitch(glitch, gc=1024, width=10, plot=False)
 
         assert np.allclose(corr, nom_corr)
 
@@ -20,7 +19,7 @@ class TestQuantify(unittest.TestCase):
         glitch = np.ones(2048)
         glitch[:1024] -= 0.1
         glitch[1024:] += 0.1
-        corr = sqp.remedy_quadrant_glitch(glitch, gc=1024, width=10)
+        corr = sqp.remedy_quadrant_glitch(glitch, gc=1024, width=10, plot=False)
 
         assert np.allclose(corr, nom_corr)
 
