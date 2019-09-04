@@ -192,3 +192,45 @@ def remove_stray_signal(s, reg):
     clip.data[0:int(reg*xp)] = 0.0
 
     return clip
+
+def remedy_quadrant_glitch(s, gc=1024, width=10, plot=False):
+    '''
+    If there is a gain glitch due to the CCD quadrants, measure and correct.
+
+    Parameters
+    ----------
+    s : ndarray
+        The spectrum data to be corrected.
+    gc : int
+        Channel position of step glitch. For raw spectra from GIF Ultrascan
+        camera, this occurs at the midpoint of the spectrum in channel 1024.
+    width : int
+        Number of channels to use either side of gc
+    plot : bool
+        If true, plot before and after results
+
+    Returns
+    -------
+    out : ndarray
+        The glitch-corrected spectral data.
+    '''
+    # Extract signal windows to average
+    window_L = s[gc-width:gc]
+    window_R = s[gc:gc+width]
+    # Calculate Means
+    mu_L = np.mean(window_L)
+    mu_R = np.mean(window_R)
+    # Difference between means
+    delta = (mu_R - mu_L)/2.0
+    # Make copy of spectrum to correct
+    out = s.deepcopy()
+    # Make half-and-half correction
+    out[:gc] += delta
+    out[gc:] -= delta
+    # Now plot
+    if plot:
+        plt.figure()
+        plt.plot(s)
+        plt.plot(out)
+
+    return out
