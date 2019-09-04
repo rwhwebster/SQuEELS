@@ -9,7 +9,7 @@ The package is has been written using Python 3.6.8, though all elements should r
 * numpy
 * scipy
 * matplotlib
-* hyperspy
+* hyperspy (tested using version 1.5.1, but others should work)
 * lmfit
 * pymc3
 
