@@ -19,6 +19,7 @@ class TestQuantify(unittest.TestCase):
         assert np.allclose(theta, nom_theta)
 
     def test_normalEqn_multivariate(self):
+        # TODO Update Test
         nDat = 10
         nom_theta = np.array([0.5, 2.0])
         X1 = np.arange(nDat)
