@@ -8,7 +8,18 @@ plt.ion()
 
 def _normalEqn(X, y):
     '''
+    Calculate solution to linear regression parameters by matrix inversion.
 
+    Parameters
+    ----------
+    X : ndarray
+        Matrix of fit components
+    y : ndarray
+        Observed data points
+    Returns
+    -------
+    theta : ndarray
+        Optimised model parameters
     '''
     theta = np.zeros((X.shape[1], 1))
     
