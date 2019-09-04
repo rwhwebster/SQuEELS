@@ -223,7 +223,7 @@ def remedy_quadrant_glitch(s, gc=1024, width=10, plot=False):
     # Difference between means
     delta = (mu_R - mu_L)/2.0
     # Make copy of spectrum to correct
-    out = s.deepcopy()
+    out = s.copy()
     # Make half-and-half correction
     out[:gc] += delta
     out[gc:] -= delta
