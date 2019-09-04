@@ -14,7 +14,8 @@ __all__ = [
     'fourier_tools',
     'quantify',
     'processing',
-    'io']
+    'io',
+    'bayes']
 
 for x in __all__:
     exec('from . import %s' %(x))
