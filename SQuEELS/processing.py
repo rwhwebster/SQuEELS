@@ -166,32 +166,68 @@ def match_spectra_sizes(s1, s2):
 
     return o1, o2
 
-def remove_stray_signal(s, reg):
+def remove_stray_signal(s, sig_range, stray_shape='browse', method=0):
     '''
     Method for identifying and removing stray signal under the low-loss
     spectrum.  Stray signal manifests as intensity before the zero-loss peak.
 
     Parameters
     ----------
-    s :
+    s : Hyperspy spectrum
+
+    sig_range : tuple
+
+    stray_shape : string
+
+    method : int
 
     Returns
     -------
-    out :
+    out : Hyperspy spectrum
 
     '''
-    # Create a rough method first of all
+    # Get scale calibration details
     xo = s.axes_manager[0].offset
     xs = s.axes_manager[0].scale
-    xp = abs(xo/xs) # Channel position of zero energy
-    # 
-    offset = np.mean(s.data[0:int(reg*xp)])
+    # Dip into one of the methods
+    if method==0:
+        # Create a rough method first of all
+        
+        xp = abs(xo/xs) # Channel position of zero energy
+        # 
+        offset = np.mean(s.data[0:int(reg*xp)])
 
-    clip = s - offset
+        out = s - offset
 
-    clip.data[0:int(reg*xp)] = 0.0
+        out.data[0:int(reg*xp)] = 0.0
 
-    return clip
+        return out
+    elif method==1:
+        # Load file containing stray signal
+        if stray_shape=='browse':
+            from tkinter import filedialog
+            import tkinter as tk
+            root=tk.Tk()
+            root.withdraw()
+            fp = filedialog.askopenfilename(filetypes=(('DM Files', '*.dm3'),))
+            print('Retrieving stray shape from '+fp)
+            stray = hs.load(fp).data
+        else:
+            stray = hs.load(stray_shape).data
+        # Recast sig_range as channel numbers
+        chan_range = np.divide(np.subtract(sig_range, xo), xs)
+        # Compare stray signal to spectrum to be corrected
+        sig_sum = s.data[int(chan_range[0]):int(chan_range[1])].sum()
+        stray_sum = stray[int(chan_range[0]):int(chan_range[1])].sum()
+        mult = sig_sum/stray_sum
+        stray *= mult
+        out = s.deepcopy()
+        out -= stray[:len(out.data)]
+
+        return out
+
+    else:
+        raise Exception('Invalid method identifier specified.')
 
 def remedy_quadrant_glitch(s, gc=1024, width=10, plot=False):
     '''
