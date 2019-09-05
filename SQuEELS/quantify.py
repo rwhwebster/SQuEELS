@@ -56,12 +56,12 @@ class LRmodel:
         Perform any preparatory steps before performing fit.
         '''
         if self.LL:
-            currentL = self.LL.inav[nav[0], nav[1]]
+            currentL = self.LL.inav[nav]
             self.stds.convolve_ready(currentL, kwargs={'stray':True})
             model = self.stds.conv
         else:
             model = self.stds.ready
-        y_obs = self.HL.inav[nav[0], nav[1]].data.T
+        y_obs = self.HL.inav[nav].data.T
         x_mat = np.array([model[comp].data for comp in self.comps]).T
 
         return y_obs, x_mat
