@@ -143,9 +143,9 @@ def match_spectra_sizes(s1, s2):
 
     Parameters
     ----------
-    s1 :
+    s1 : Hyperspy spectrum
 
-    s2 :
+    s2 : Hyperspy spectrum
 
     Returns
     -------
