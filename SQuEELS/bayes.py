@@ -8,6 +8,141 @@ import pymc3 as pm
 import matplotlib.pyplot as plt
 plt.ion()
 
+class BayesModel:
+    '''
+    Class for handling Bayesian analysis of elemental composition.
+    '''
+    def __init__(self, core_loss, stds, comps, data_range, low_loss=None):
+        '''
+        Parameters
+        ----------
+        core_loss : Hyperspy spectrum (image)
+
+        stds : SQuEELS Standards object
+
+        comps : list of strings
+
+        data_range : length 2 tuple of floats
+        
+        low_loss : Hyperspy spectrum (image)
+
+        '''
+
+        self.stds = stds
+        self.stds.set_all_inactive()
+        
+        self.comps = comps
+        self.stds.set_active_standards(self.comps)
+
+        if low_loss:
+            self.LL = low_loss
+
+        self.dims = core_loss.data.shape
+        self.nDims = len(self.dims)
+        sigDim = core_loss.axes_manager.signal_indices_in_array[0]
+
+        try:
+            self.HL = core_loss.deepcopy()
+            self.HL.crop(start=data_range[0], end=data_range[1], axis=sigDim)
+        except:
+            raise Exception('Something went wrong cropping core-loss data.')
+
+        self.stds.set_spectrum_range(*data_range)
+
+
+
+    def init_model(self, nav=None, mu_0=None):
+        '''
+        Initialise a model for the current spectrum.
+
+        Parameters
+        ----------
+        nav : length 2 list of ints
+            The inav coordinates of the spectrum within the SI to be
+            quantified. Do not provide if model was initialised with
+            single spectrum.
+        mu_0 : len(comps) tuple of floats
+            Initial guesses to help model reach solution faster.
+            Optional.
+        '''
+        # Forward convolve references if LL is provided
+        if self.LL:
+            if nav is None:
+                currentL = self.LL
+            else:
+                currentL = self.LL.inav[nav]
+            self.stds.convolve_ready(currentL, kwargs={'stray':True})
+            self.stds.model = self.stds.conv
+        else:
+            self.stds.model = self.stds.ready
+        # Prepare relevant core-loss data
+        if nav is None:
+            self._Y = self.HL
+        else:
+            self._Y = self.HL.inav[nav]
+
+        if not mu_0:
+            mu_0 = (1.0,)*len(self.comps)
+        # Create pm model instance
+        with pm.Model() as self.model:
+            beta = []
+            for i, comp in enumerate(self.comps):
+                beta.append(pm.Normal(comp, mu=mu_0[i], sigma=1))
+            sigma = pm.HalfCauchy('sigma', beta=10, testval=1.)
+
+            mu = None
+
+            for i, comp in enumerate(self.comps):
+                if mu is None:
+                    mu = beta[i]*self.stds.model[comp].data
+                else:
+                    mu += beta[i]*self.stds.model[comp].data
+
+            likelihood = pm.Normal('Y_obs', mu=mu, sigma=sigma, observed=self._Y.data)
+
+    def start_chains(self, nDraws=1000, params=None, plot=False):
+        '''
+        
+        '''
+        if self.model is None:
+            raise Exception("The step 'init_model' needs to be run first.")
+
+
+        with self.model:
+            self.trace = pm.sample(nDraws, **params)
+
+        if plot:
+            self.show_results()
+
+    def show_results(self):
+        '''
+        
+        '''
+        if self.trace:
+            pm.traceplot(self.trace)
+            stats = pm.summary(self.trace)
+            print(stats)
+            fig, ax = plt.subplots(1,1)
+            ax.plot(self._Y.data)
+            fit = self._Y.data.copy()*0
+            for comp in self.comps:
+                par = self.stds.model[comp].data*stats['mean'][comp]
+                fit += par
+                ax.plot(par)
+            ax.plot(fit)
+            ax.legend(['Data',*self.comps,'Fit'])
+            fig.suptitle("Comparison of fit and data")
+            fig.show()
+            from pandas.plotting import scatter_matrix
+            scatter_matrix(pm.trace_to_dataframe(self.trace), figsize=(10,10))
+        else:
+            raise Exception('No trace has been computed to visualise.')
+
+# END OF CLASS
+
+
+
+
 def create_bayes_model(stds, comps, data, data_range, guesses=(1.0,), LL=None, plot=False):
     '''
     Initialised a pymc3 model using the active standards library
