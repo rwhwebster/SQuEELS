@@ -11,6 +11,9 @@ import matplotlib.pyplot as plt
 plt.ion()
 
 class LRmodel:
+    '''
+    Class for handling quantification of data using simple linear regression.
+    '''
     def __init__(self, core_loss, stds, comps, data_range, low_loss=None):
         '''
         Create a Linear Regression Model.
@@ -46,7 +49,7 @@ class LRmodel:
         except:
             raise Exception("Cropping of observed signal failed.")
         # If successful, crop/pad standards to same range
-        self.stds.set_spectrum_range(data_range[0], data_range[1])
+        self.stds.set_spectrum_range(*data_range)
 
     def _init_step(self, nav):
         '''
