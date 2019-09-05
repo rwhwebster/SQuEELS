@@ -79,7 +79,7 @@ class LRmodel:
         return 1
 
 
-    def plot_fit_results(self, cmap='viridis'):
+    def plot_multifit_results(self, cmap='viridis'):
         '''
         Plot fit coefficient maps.
         '''
