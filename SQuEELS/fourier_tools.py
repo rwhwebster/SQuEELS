@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import numpy as np
-import scipy as sp
 
 from numpy.fft import fft, ifft
 
@@ -19,7 +18,7 @@ def fourier_ratio_deconvolution(HL, LL, stray=False, pad=True, plot=False):
 
     Paramters
     ---------
-    HL :
+    HL : 
 
     LL : 
 
@@ -54,7 +53,7 @@ def fourier_ratio_deconvolution(HL, LL, stray=False, pad=True, plot=False):
     
     
     # Extract the Zero-loss Peak for the modifier
-    ZLP = extract_ZLP(low, plot=plot)
+    ZLP = extract_ZLP(low, method='reflected tail', plot=plot)
     # Calculate Fourier Transforms.
     LLF = fft(low.data)
     HLF = fft(high.data)
@@ -111,7 +110,7 @@ def reverse_fourier_ratio_convoln(HL, LL, stray=False, pad=True, plot=False):
     
     
     # Extract the Zero-loss Peak for the modifier
-    ZLP = extract_ZLP(low, plot=plot)
+    ZLP = extract_ZLP(low, method='reflected tail', plot=plot)
     # Calculate Fourier Transforms.
     LLF = fft(low.data)
     HLF = fft(high.data)
