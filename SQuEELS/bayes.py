@@ -125,18 +125,22 @@ class BayesModel:
         
         '''
         if self.trace:
+            # Plot trace histograms
             pm.traceplot(self.trace)
             stats = pm.summary(self.trace)
             print(stats)
+            #Plot fit over data
+            xvals = self._Y.axes_manager[0].axis
             fig, ax = plt.subplots(1,1)
-            ax.plot(self._Y.data)
+            ax.plot(xvals, self._Y.data)
             fit = self._Y.data.copy()*0
             for comp in self.comps:
                 par = self.stds.model[comp].data*stats['mean'][comp]
                 fit += par
-                ax.plot(par)
-            ax.plot(fit)
+                ax.plot(xvals, par)
+            ax.plot(xvals, fit)
             ax.legend(['Data',*self.comps,'Fit'])
+            ax.set_xlabel('Energy-loss (eV)')
             fig.suptitle("Comparison of fit and data")
             fig.show()
             from pandas.plotting import scatter_matrix
