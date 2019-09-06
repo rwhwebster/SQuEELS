@@ -13,7 +13,7 @@ from .fourier_tools import reverse_fourier_ratio_convoln
 
 
 class Standards:
-    def __init__(self, fp=None, browse=True):
+    def __init__(self, fp=None):
         '''
         Class to handle reference spectra from standard materials.
         Class is designed to look in one folder that contains all standards
@@ -32,7 +32,7 @@ class Standards:
         
         '''
 
-        if fp is None and browse is True:
+        if fp is None:
             from tkinter import filedialog
             import tkinter as tk
             root = tk.Tk()
