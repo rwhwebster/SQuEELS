@@ -41,7 +41,7 @@ def make_hann_window(dims, side, direction=0):
 
     return window
 
-def extract_ZLP(s, plot=False):
+def extract_ZLP(s, method='fit', plot=False):
     '''
     Examines spectrum s for zero-loss peak and returns a dataset of the same
     dimensions, but which only contains the ZLP.
@@ -50,8 +50,13 @@ def extract_ZLP(s, plot=False):
     ----------
     s : hyperspy spectrum object
         Must be a low-loss spectrum which contains the 0eV channel.
+    method : string
+        Procedure for extracting the ZLP.  Available options are:
+        - 'fit' : Fits a skewed Voigt function to the ZLP.
+        - 'reflected tail' : Creates a ZLP model by reflecting the energy
+            gain side of the ZLP about the maximum.
     plot : Boolean
-        Determines whether to plot results or not.
+        If true, plots the extracted ZLP over the low-loss data.
 
     Returns
     -------
@@ -62,41 +67,54 @@ def extract_ZLP(s, plot=False):
     TODO
     ----
     Further testing on ZLPs of different dispersions. Confirm SkewedVoigtModel
-    is a good choice.
+    is a reasonable choice, but could benefit from further optimisation.
     '''
 
     # Spectrum must contain zero-channel
+
     offset = s.axes_manager[0].offset
     scale = s.axes_manager[0].scale
     zlpChannel = -offset/scale
     if zlpChannel < 0 or zlpChannel > s.axes_manager[0].size:
         raise Exception('Spectrum provided does not contain the 0eV channel.')
+    zlpChannel = np.argmax(s.data)
 
-    # Create Model for ZLP
-    mod = models.SkewedVoigtModel(prefix='ZLP')
-    mod.set_param_hint('ZLPcenter', value=0.0, min=-1.0, max=1.0)
-    mod.set_param_hint('ZLPamplitude', value=max(s.data))
-    mod.set_param_hint('ZLPsigma', value=1/scale)
-    mod.set_param_hint('ZLPgamma', value=10)
+    if method=='fit':
+        # Create Model for ZLP
+        mod = models.SkewedVoigtModel(prefix='ZLP')
+        mod.set_param_hint('ZLPcenter', value=0.0, min=-1.0, max=1.0)
+        mod.set_param_hint('ZLPamplitude', value=max(s.data))
+        mod.set_param_hint('ZLPsigma', value=1/scale)
+        mod.set_param_hint('ZLPgamma', value=10)
 
-    # prepare data for fit
-    buf = 10
-    x = s.axes_manager[0].axis
-    y = s.data
-    weights = y.copy()*0
-    weights[int(zlpChannel-buf/scale):int(zlpChannel+buf/scale)] = 1.0
+        # prepare data for fit
+        buf = 10
+        x = s.axes_manager[0].axis
+        y = s.data
+        weights = y.copy()*0
+        weights[int(zlpChannel-buf/scale):int(zlpChannel+buf/scale)] = 1.0
 
-    result = mod.fit(y, x=x, method='leastsq', weights=weights)
-    fitted = result.best_fit
+        result = mod.fit(y, x=x, method='leastsq', weights=weights)
+        fitted = result.best_fit
+
+        ZLP = s.deepcopy()
+        ZLP.data = fitted
+
+    elif method=='reflected tail':
+        # crude method that assumes symmetric ZLP
+        ZLP = s.deepcopy()
+        reflect = int(np.round(zlpChannel)) + 1
+        tail = s.data[:reflect]
+        ZLP.data[reflect:] *= 0
+        ZLP.data[reflect:2*reflect-1] = tail[::-1][1:]
+    else:
+        raise Exception('Invalid extraction procedure defined in "method".')
 
     if plot:
-        plt.figure()
-        plt.plot(x, y, label='data')
-        plt.plot(x, fitted, label='fit')
-        plt.show()
-
-    ZLP = s.deepcopy()
-    ZLP.data = fitted
+            plt.figure()
+            plt.plot(s.data, label='data')
+            plt.plot(ZLP.data, label='fit')
+            plt.show()
 
     return ZLP
 
@@ -143,14 +161,17 @@ def match_spectra_sizes(s1, s2):
 
     Parameters
     ----------
-    s1 :
-
-    s2 :
+    s1 : Hyperspy spectrum
+        One of the two spectra to be size matched.
+    s2 : Hyperspy spectrum
+        One of the two spectra to be size matched.
 
     Returns
     -------
-    o1, o2 : 
-
+    o1 : Hyperspy spectrum
+        The size-matched version of input s1.
+    o2 : Hyperspy spectrum
+        The size-matched version of input s2.
     '''
     l1 = len(s1.data)
     l2 = len(s2.data)
@@ -166,29 +187,126 @@ def match_spectra_sizes(s1, s2):
 
     return o1, o2
 
-def remove_stray_signal(s, reg):
+def remove_stray_signal(s, sig_range, method, stray_shape=None, smooth=True):
     '''
     Method for identifying and removing stray signal under the low-loss
     spectrum.  Stray signal manifests as intensity before the zero-loss peak.
 
     Parameters
     ----------
-    s :
+    s : Hyperspy spectrum
+        The spectrum from which to remove signal.
+    sig_range : tuple of floats/ints
+        The start and end energies of the window over which to integrate
+        signal to determine scaling factor for stray shape.
+    method : int
+        decides which procedure to use for removing stray signal. Available
+        options are:
+            - 0 : Flat subtraction of the mean value within sig_range from the
+                whole spectrum.
+            - 1 : Provide a .dm3 file with a stray shape to subtract. The shape
+            is scaled using the ratio of the intensities in sig_range
+    stray_shape : string
+        Path to the file containing the stray shape to be used for method 1.
+        If None, opens a file browser.
+    smooth : Boolean
+        If true, nulls all the data to the left of the zero-loss from the point
+        closest to the ZLP where negative intensity is encountered.  
+        This part of the method needs refined.
 
     Returns
     -------
-    out :
-
+    out : Hyperspy spectrum
+        The stray corrected low-loss spectrum.
     '''
-    # Create a rough method first of all
+    # Get scale calibration details
     xo = s.axes_manager[0].offset
     xs = s.axes_manager[0].scale
-    xp = abs(xo/xs) # Channel position of zero energy
-    # 
-    offset = np.mean(s.data[0:int(reg*xp)])
+    chan_range = np.divide(np.subtract(sig_range, xo), xs)
+    # Dip into one of the methods
+    if method==0:
+        # Create a rough method first of all
+        # 
+        offset = np.mean(s.data[int(chan_range[0]):int(chan_range[1])])
 
-    clip = s - offset
+        out = s - offset
 
-    clip.data[0:int(reg*xp)] = 0.0
+        out.data[0:int(chan_range[1])] = 0.0
 
-    return clip
+    elif method==1:
+        # Load file containing stray signal
+        if not stray_shape:
+            from tkinter import filedialog
+            import tkinter as tk
+            root=tk.Tk()
+            root.withdraw()
+            fp = filedialog.askopenfilename(filetypes=(('DM Files', '*.dm3'),))
+            print('Retrieving stray shape from '+fp)
+            stray = hs.load(fp).data
+        else:
+            stray = hs.load(stray_shape).data
+        # Recast sig_range as channel numbers
+        # Compare stray signal to spectrum to be corrected
+        sig_sum = s.data[int(chan_range[0]):int(chan_range[1])].sum()
+        stray_sum = stray[int(chan_range[0]):int(chan_range[1])].sum()
+        mult = sig_sum/stray_sum
+        stray *= mult
+        out = s.deepcopy()
+        out -= stray[:len(out.data)]
+
+    else:
+        raise Exception('Invalid method identifier specified.')
+
+    if smooth:
+        cont = True
+        index = np.argmax(out.data)
+        while cont:
+            if out.data[index] < 0.0:
+                out.data[:index+1] = 0.0
+                cont = False
+            else:
+                index -= 1
+
+    return out
+
+def remedy_quadrant_glitch(s, gc=1024, width=10, plot=False):
+    '''
+    If there is a gain glitch due to the CCD quadrants, measure and correct.
+
+    Parameters
+    ----------
+    s : ndarray
+        The spectrum data to be corrected.
+    gc : int
+        Channel position of step glitch. For raw spectra from GIF Ultrascan
+        camera, this occurs at the midpoint of the spectrum in channel 1024.
+    width : int
+        Number of channels to use either side of gc
+    plot : bool
+        If true, plot before and after results
+
+    Returns
+    -------
+    out : ndarray
+        The glitch-corrected spectral data.
+    '''
+    # Extract signal windows to average
+    window_L = s[gc-width:gc]
+    window_R = s[gc:gc+width]
+    # Calculate Means
+    mu_L = np.mean(window_L)
+    mu_R = np.mean(window_R)
+    # Difference between means
+    delta = (mu_R - mu_L)/2.0
+    # Make copy of spectrum to correct
+    out = s.copy()
+    # Make half-and-half correction
+    out[:gc] += delta
+    out[gc:] -= delta
+    # Now plot
+    if plot:
+        plt.figure()
+        plt.plot(s)
+        plt.plot(out)
+
+    return out

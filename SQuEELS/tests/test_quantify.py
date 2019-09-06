@@ -2,7 +2,6 @@ from __future__ import print_function
 import unittest
 import numpy as np
 
-import SQuEELS
 import SQuEELS.quantify as sqq
 
 class TestQuantify(unittest.TestCase):
@@ -19,6 +18,7 @@ class TestQuantify(unittest.TestCase):
         assert np.allclose(theta, nom_theta)
 
     def test_normalEqn_multivariate(self):
+        # TODO Update Test
         nDat = 10
         nom_theta = np.array([0.5, 2.0])
         X1 = np.arange(nDat)

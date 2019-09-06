@@ -1,7 +1,6 @@
 import sys
 
-name = "SQuEELS"
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 
 # python version
@@ -14,7 +13,8 @@ __all__ = [
     'fourier_tools',
     'quantify',
     'processing',
-    'io']
+    'io',
+    'bayes']
 
 for x in __all__:
     exec('from . import %s' %(x))

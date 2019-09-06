@@ -3,119 +3,141 @@ from __future__ import print_function
 import numpy as np
 import scipy as sp
 
-import pymc3 as pm
+from tqdm import tqdm
+
+import hyperspy.api as hs
 
 import matplotlib.pyplot as plt
 plt.ion()
-    
-def create_bayes_model(stds, comps, data, data_range, guesses=(1.0,), LL=None, plot=False):
+
+class LRmodel:
     '''
-    Initialised a pymc3 model using the active standards library
-
-    Parameters
-    ----------
-    stds : Standards Library
-
-    comps : list of strings
-
-    data : Hyperspy Spectrum Object
-
-    data_range : tuple of floats
-
-    guesses : tuple of floats
-        
-    LL : Hyperspy spectrum object
-
-    plot : boolean
-
-    Returns
-    -------
-    model : pymc3 model
-
+    Class for handling quantification of data using simple linear regression.
     '''
+    def __init__(self, core_loss, stds, comps, data_range, low_loss=None):
+        '''
+        Create a Linear Regression Model.
 
-    # First, reset standards library
-    stds.set_all_inactive()
-    # Then use comps to specify which Standards are to be used
-    stds.set_active_standards(comps)
-    # Now, use the data range provided to set the fit range in the data
-    try:
-        Y = data.deepcopy()
-        Y.crop(start=data_range[0], end=data_range[1], axis=0)
-    except:
-        raise Exception('Problem cropping observed data.')
-    # If crop of data succeeds, apply same to active Standards
-    stds.set_spectrum_range(data_range[0], data_range[1])
-    # If Low-loss is provided, convolve standards
-    if LL:
-        stds.convolve_ready(LL, kwargs={'stray':True})
-        stds.model = stds.conv
-    else:
-        stds.model = stds.ready
-    # Create model
-    with pm.Model() as model:
-        beta = []
-        for i, comp in enumerate(comps):
-            beta.append(pm.Normal(comp, mu=guesses[i], sigma=1))
-        # sigma = pm.HalfNormal('sigma', sigma=1)
-        sigma = pm.HalfCauchy('sigma', beta=10, testval=1.)
+        Parameters
+        ----------
+        core_loss : Hyperspy spectrum or spectrum image
+            The core-loss data to be modelled.
+        stds : SQuEELS Standards object
+            The standards library object loaded by the class method in 
+            SQuEELS.io
+        comps : list of strings
+            The names of the references in the standards library which are
+            to be used as components in the model.
+        data_range : tuple of floats
+            The start and end energies over which to model. Must be provided
+            as floats, ints will do weird stuff because of the way Hysperspy
+            operates.
+        low_loss : Hyperspy spectrum or spectrum image
+            If provided, the low-loss spectrum is used to forward-convolve the
+            components standards before modelling.
+        '''
+        self.stds = stds
+        self.comps = comps
 
-        mu = None
+        self.stds.set_all_inactive()
+        self.stds.set_active_standards(self.comps)
 
-        for i, comp in enumerate(comps):
-            if mu is None:
-                mu = beta[i]*stds.model[comp].data
-            else:
-                mu += beta[i]*stds.model[comp].data
+        if low_loss:
+            self.LL = low_loss
+        # Check how many dimensions there are and crop data to fit range
+        self.dims = core_loss.data.shape
+        self.nDims = len(self.dims)
+        sigDim = core_loss.axes_manager.signal_indices_in_array[0]
+        try:
+            self.HL = core_loss.deepcopy()
+            self.HL.crop(start=data_range[0], end=data_range[1], axis=sigDim)
+        except:
+            raise Exception("Cropping of observed signal failed.")
+        # If successful, crop/pad standards to same range
+        self.stds.set_spectrum_range(*data_range)
 
-        likelihood = pm.Normal('Y_obs', mu=mu, sigma=sigma, observed=Y.data)
+    def _init_step(self, nav):
+        '''
+        Perform any preparatory steps before performing fit.
 
-    if plot:
-        plt.figure()
-        plt.plot(Y.data)
-        for comp in comps:
-            plt.plot(stds.ready[comp].data)
+        Parameters
+        ----------
+        nav : list of ints (length 2)
+            The inav coordinates of the SI to fit.
+        '''
+        if self.LL:
+            currentL = self.LL.inav[nav]
+            self.stds.convolve_ready(currentL, kwargs={'stray':True})
+            model = self.stds.conv
+        else:
+            model = self.stds.ready
+        y_obs = self.HL.inav[nav].data.T
+        x_mat = np.array([model[comp].data for comp in self.comps]).T
 
-    return model
+        return y_obs, x_mat
 
-def fit_bayes_model(model=None, nDraws=1000, params=None, plot=False):
-    '''
-    Run Monte-Carlo chains on model and return fit results.
+    def do_multifit(self):
+        '''
+        Run regression on all spectra in dataset.
+        '''
+        d1 = self.dims[0]
+        d2 = self.dims[1]
+        self.results = np.zeros((d1, d2, len(self.comps)))
+        with tqdm(total=(d1*d2), unit='spectra') as pbar:
+            for i in range(d1):
+                for j in range(d2):
+                    Y, X = self._init_step((j, i))
+                    self.results[i,j,:] = _normalEqn(X, Y)
+                    pbar.update(1)
+        return 1
 
-    Parameters
-    ----------
-    model : pymc3 model
-        A model prepared using create_bayes_model
-    sample_params : dict
-        contains arguments to be passed to the sampling function
-        See pymc3.sample for arguments.
-    plot : boolean
-        If true, plot details of the final trace
-    Returns
-    -------
 
-    '''
+    def plot_multifit_results(self, cmap='viridis'):
+        '''
+        Plot fit coefficient maps.
 
-    if model is None:
-        raise Exception("model=None method does not exist.")
+        Parameters
+        ----------
+        cmap : string
+            the matplotlib colourmap to use for the plots.
+        '''
+        nComps = len(self.comps)
+        nRows = np.int_(np.floor(np.sqrt(nComps)))
+        nCols = np.int_(np.ceil(nComps/nRows))
 
-    # Prepare parameters
+        fig, subplots = plt.subplots(nRows, nCols)
+        for i, ax in enumerate(fig.axes):
+            if i in range(nComps):
+                ax.imshow(self.results[:,:,i], cmap=cmap) 
+                # plt.matplotlib.colors.SymLogNorm(linthresh=0.03)
+                ax.set_title(self.comps[i])
+                ax.axis('off')
+        fig.suptitle("Regression Maps")
+        fig.show()
 
-    with model:
-        trace = pm.sample(nDraws, **params)
 
-    if plot:
-        pm.traceplot(trace)
+# END OF CLASS
 
-    return trace
 
 def _normalEqn(X, y):
     '''
+    Calculate solution to linear regression parameters by matrix inversion.
+    theta = ((X'X)^-1)X'y
 
+    Parameters
+    ----------
+    X : ndarray
+        Matrix of fit components
+    y : ndarray
+        Observed data points
+    Returns
+    -------
+    theta : ndarray
+        Optimised model parameters
     '''
-    theta = np.zeros((X.shape[1], 1))
+    theta = np.zeros((X.shape[1], 1), dtype=np.float32)
     
-    theta = np.dot(np.dot(np.linalg.pinv(np.dot(X.T, X)), X.T), y)
+    theta = np.dot(np.dot(np.linalg.pinv(np.dot(X.T, X)), X.T).astype(np.float32), y.astype(np.float32))
 
     return theta
 
@@ -166,4 +188,3 @@ def solo_normal_solver(stds, comps, data, data_range, LL=None, plot=False):
     theta = _normalEqn(x_mat, y_obs)
 
     return theta
-
