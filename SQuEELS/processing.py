@@ -41,7 +41,7 @@ def make_hann_window(dims, side, direction=0):
 
     return window
 
-def extract_ZLP(s, plot=False):
+def extract_ZLP(s, method='fit', plot=False):
     '''
     Examines spectrum s for zero-loss peak and returns a dataset of the same
     dimensions, but which only contains the ZLP.
@@ -66,37 +66,49 @@ def extract_ZLP(s, plot=False):
     '''
 
     # Spectrum must contain zero-channel
+
     offset = s.axes_manager[0].offset
     scale = s.axes_manager[0].scale
     zlpChannel = -offset/scale
     if zlpChannel < 0 or zlpChannel > s.axes_manager[0].size:
         raise Exception('Spectrum provided does not contain the 0eV channel.')
+    zlpChannel = np.argmax(s.data)
 
-    # Create Model for ZLP
-    mod = models.SkewedVoigtModel(prefix='ZLP')
-    mod.set_param_hint('ZLPcenter', value=0.0, min=-1.0, max=1.0)
-    mod.set_param_hint('ZLPamplitude', value=max(s.data))
-    mod.set_param_hint('ZLPsigma', value=1/scale)
-    mod.set_param_hint('ZLPgamma', value=10)
+    if method=='fit':
+        # Create Model for ZLP
+        mod = models.SkewedVoigtModel(prefix='ZLP')
+        mod.set_param_hint('ZLPcenter', value=0.0, min=-1.0, max=1.0)
+        mod.set_param_hint('ZLPamplitude', value=max(s.data))
+        mod.set_param_hint('ZLPsigma', value=1/scale)
+        mod.set_param_hint('ZLPgamma', value=10)
 
-    # prepare data for fit
-    buf = 10
-    x = s.axes_manager[0].axis
-    y = s.data
-    weights = y.copy()*0
-    weights[int(zlpChannel-buf/scale):int(zlpChannel+buf/scale)] = 1.0
+        # prepare data for fit
+        buf = 10
+        x = s.axes_manager[0].axis
+        y = s.data
+        weights = y.copy()*0
+        weights[int(zlpChannel-buf/scale):int(zlpChannel+buf/scale)] = 1.0
 
-    result = mod.fit(y, x=x, method='leastsq', weights=weights)
-    fitted = result.best_fit
+        result = mod.fit(y, x=x, method='leastsq', weights=weights)
+        fitted = result.best_fit
+
+        ZLP = s.deepcopy()
+        ZLP.data = fitted
+
+    elif method=='reflected tail':
+        # crude method that assumes symmetric ZLP
+        ZLP = s.deepcopy()
+        reflect = int(np.round(zlpChannel)) + 1
+        print(reflect)
+        tail = s.data[:reflect]
+        ZLP.data[reflect:] *= 0
+        ZLP.data[reflect:2*reflect-1] = tail[::-1][1:]
 
     if plot:
-        plt.figure()
-        plt.plot(x, y, label='data')
-        plt.plot(x, fitted, label='fit')
-        plt.show()
-
-    ZLP = s.deepcopy()
-    ZLP.data = fitted
+            plt.figure()
+            plt.plot(s.data, label='data')
+            plt.plot(ZLP.data, label='fit')
+            plt.show()
 
     return ZLP
 
@@ -166,7 +178,7 @@ def match_spectra_sizes(s1, s2):
 
     return o1, o2
 
-def remove_stray_signal(s, sig_range, stray_shape='browse', method=0):
+def remove_stray_signal(s, sig_range, stray_shape='browse', smooth=True, method=0):
     '''
     Method for identifying and removing stray signal under the low-loss
     spectrum.  Stray signal manifests as intensity before the zero-loss peak.
@@ -192,7 +204,6 @@ def remove_stray_signal(s, sig_range, stray_shape='browse', method=0):
     # Dip into one of the methods
     if method==0:
         # Create a rough method first of all
-        
         xp = abs(xo/xs) # Channel position of zero energy
         # 
         offset = np.mean(s.data[0:int(reg*xp)])
@@ -201,7 +212,6 @@ def remove_stray_signal(s, sig_range, stray_shape='browse', method=0):
 
         out.data[0:int(reg*xp)] = 0.0
 
-        return out
     elif method==1:
         # Load file containing stray signal
         if stray_shape=='browse':
@@ -224,10 +234,20 @@ def remove_stray_signal(s, sig_range, stray_shape='browse', method=0):
         out = s.deepcopy()
         out -= stray[:len(out.data)]
 
-        return out
-
     else:
         raise Exception('Invalid method identifier specified.')
+
+    if smooth:
+        cont = True
+        index = np.argmax(out.data)
+        while cont:
+            if out.data[index] < 0.0:
+                out.data[:index+1] = 0.0
+                cont = False
+            else:
+                index -= 1
+
+    return out
 
 def remedy_quadrant_glitch(s, gc=1024, width=10, plot=False):
     '''
