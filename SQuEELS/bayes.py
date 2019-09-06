@@ -6,6 +6,8 @@ import scipy as sp
 import pymc3 as pm
 
 import matplotlib.pyplot as plt
+
+from .processing import remove_stray_signal
 plt.ion()
 
 class BayesModel:
@@ -51,7 +53,7 @@ class BayesModel:
 
 
 
-    def init_model(self, nav=None, mu_0=None):
+    def init_model(self, nav=None, mu_0=None, deStray=None, strayArgs={'method':1}, zlpArgs={}):
         '''
         Initialise a model for the current spectrum.
 
@@ -65,13 +67,17 @@ class BayesModel:
             Initial guesses to help model reach solution faster.
             Optional.
         '''
+        # Remove stray signal if requested.
+        if deStray:
+            temp = self.LL.deepcopy()
+            self.LL = remove_stray_signal(temp, deStray.pop('method'), *strayArgs)
         # Forward convolve references if LL is provided
         if self.LL:
             if nav is None:
                 currentL = self.LL
             else:
                 currentL = self.LL.inav[nav]
-            self.stds.convolve_ready(currentL, kwargs={'stray':True})
+            self.stds.convolve_ready(currentL, kwargs=zlpArgs)
             self.stds.model = self.stds.conv
         else:
             self.stds.model = self.stds.ready

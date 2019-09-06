@@ -99,7 +99,6 @@ def extract_ZLP(s, method='fit', plot=False):
         # crude method that assumes symmetric ZLP
         ZLP = s.deepcopy()
         reflect = int(np.round(zlpChannel)) + 1
-        print(reflect)
         tail = s.data[:reflect]
         ZLP.data[reflect:] *= 0
         ZLP.data[reflect:2*reflect-1] = tail[::-1][1:]
@@ -178,7 +177,7 @@ def match_spectra_sizes(s1, s2):
 
     return o1, o2
 
-def remove_stray_signal(s, sig_range, stray_shape='browse', smooth=True, method=0):
+def remove_stray_signal(s, sig_range, method, stray_shape='browse', smooth=True):
     '''
     Method for identifying and removing stray signal under the low-loss
     spectrum.  Stray signal manifests as intensity before the zero-loss peak.
@@ -201,16 +200,16 @@ def remove_stray_signal(s, sig_range, stray_shape='browse', smooth=True, method=
     # Get scale calibration details
     xo = s.axes_manager[0].offset
     xs = s.axes_manager[0].scale
+    chan_range = np.divide(np.subtract(sig_range, xo), xs)
     # Dip into one of the methods
     if method==0:
         # Create a rough method first of all
-        xp = abs(xo/xs) # Channel position of zero energy
         # 
-        offset = np.mean(s.data[0:int(reg*xp)])
+        offset = np.mean(s.data[int(chan_range[0]):int(chan_range[1])])
 
         out = s - offset
 
-        out.data[0:int(reg*xp)] = 0.0
+        out.data[0:int(chan_range[1])] = 0.0
 
     elif method==1:
         # Load file containing stray signal
@@ -225,7 +224,6 @@ def remove_stray_signal(s, sig_range, stray_shape='browse', smooth=True, method=
         else:
             stray = hs.load(stray_shape).data
         # Recast sig_range as channel numbers
-        chan_range = np.divide(np.subtract(sig_range, xo), xs)
         # Compare stray signal to spectrum to be corrected
         sig_sum = s.data[int(chan_range[0]):int(chan_range[1])].sum()
         stray_sum = stray[int(chan_range[0]):int(chan_range[1])].sum()

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 plt.ion()
 
 
-def fourier_ratio_deconvolution(HL, LL, stray=False, pad=True, plot=False):
+def fourier_ratio_deconvolution(HL, LL, pad=True, ZLPmodel='fit', plot=False):
     '''
     Function for performing Fourier-Ratio deconvolution using a zero-loss
     modifier.  Created because it is unclear what the deconvolution 
@@ -42,18 +42,11 @@ def fourier_ratio_deconvolution(HL, LL, stray=False, pad=True, plot=False):
     # Record high-loss offset, as this is lost during convolution
     HL_offset = HL.axes_manager[0].offset
     HL_size = HL.axes_manager[0].size
-    # Remove stray signal
-    if stray:
-        temp = LL.copy()
-        LL = remove_stray_signal(temp, 0.8)
     # Pad spectra for size-matching and continuity at boundaries
     if pad:
-        # TODO
         low, high = match_spectra_sizes(LL, HL)
-    
-    
     # Extract the Zero-loss Peak for the modifier
-    ZLP = extract_ZLP(low, method='reflected tail', plot=plot)
+    ZLP = extract_ZLP(low, method=ZLPmodel, plot=plot)
     # Calculate Fourier Transforms.
     LLF = fft(low.data)
     HLF = fft(high.data)
@@ -67,7 +60,7 @@ def fourier_ratio_deconvolution(HL, LL, stray=False, pad=True, plot=False):
 
     return reconv
 
-def reverse_fourier_ratio_convoln(HL, LL, stray=False, pad=True, plot=False):
+def reverse_fourier_ratio_convoln(HL, LL, pad=True, ZLPmodel='fit', plot=False):
     '''
     Function for performing Fourier-Ratio deconvolution using a zero-loss
     modifier.  Created because it is unclear what the deconvolution 
@@ -99,18 +92,11 @@ def reverse_fourier_ratio_convoln(HL, LL, stray=False, pad=True, plot=False):
     # Record high-loss offset, as this is lost during convolution
     HL_offset = HL.axes_manager[0].offset
     HL_size = HL.axes_manager[0].size
-    # Remove stray signal
-    if stray:
-        temp = LL.copy()
-        LL = remove_stray_signal(temp, 0.8)
     # Pad spectra for size-matching and continuity at boundaries
     if pad:
-        # TODO
         low, high = match_spectra_sizes(LL, HL)
-    
-    
     # Extract the Zero-loss Peak for the modifier
-    ZLP = extract_ZLP(low, method='reflected tail', plot=plot)
+    ZLP = extract_ZLP(low, method=ZLPmodel, plot=plot)
     # Calculate Fourier Transforms.
     LLF = fft(low.data)
     HLF = fft(high.data)
