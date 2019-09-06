@@ -54,6 +54,7 @@ setup(
         'matplotlib',
         'lmfit',
         'arviz',
+        'tqdm',
     ],
     python_requires='>=3.6',
     #include_package_data=True,
