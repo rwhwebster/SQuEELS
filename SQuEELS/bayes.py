@@ -19,15 +19,21 @@ class BayesModel:
         Parameters
         ----------
         core_loss : Hyperspy spectrum (image)
-
+            The core-loss data to be modelled.  Can be single spectrum or
+            spectrum image.
         stds : SQuEELS Standards object
-
+            The standards library object loaded by the class method in 
+            SQuEELS.io
         comps : list of strings
-
+            The names of the references in the standards library which are
+            to be used as components in the model.
         data_range : length 2 tuple of floats
-        
+            The start and end energies over which to model. Must be provided
+            as floats, ints will do weird stuff because of the way Hysperspy
+            operates.
         low_loss : Hyperspy spectrum (image)
-
+            If provided, the low-loss spectrum is used to forward-convolve the
+            components standards before modelling.
         '''
 
         self.stds = stds
@@ -53,9 +59,11 @@ class BayesModel:
 
 
 
-    def init_model(self, nav=None, mu_0=None, deStray=None, strayArgs={'method':1}, zlpArgs={}):
+    def init_model(self, nav=None, mu_0=None, deStray=False, strayArgs={'method':1}, zlpArgs={}):
         '''
-        Initialise a model for the current spectrum.
+        Initialise a model for the current spectrum.  This is separate from the 
+        __init__ method of the class, so that this can be repeated for multiple
+        spectra in an SI.
 
         Parameters
         ----------
@@ -66,6 +74,14 @@ class BayesModel:
         mu_0 : len(comps) tuple of floats
             Initial guesses to help model reach solution faster.
             Optional.
+        deStray : Boolean
+            If true, removes a stray signal shape from the low-loss.
+        strayArgs : dict
+            Arguments to be provided to the remove_stray_signal call.
+            See SQuEELS.processing.remove_stray_signal() for more info.
+        zlpArgs : dict
+            Specify any arguments you wish to feed to the extract_ZLP call
+            to how it is used in the forward convolution of standards.
         '''
         # Remove stray signal if requested.
         if deStray:
@@ -108,7 +124,19 @@ class BayesModel:
 
     def start_chains(self, nDraws=1000, params=None, plot=False):
         '''
-        
+        Once the model is initialised using BayesModel.init_model(), start
+        the Monte Carlo chains to perform the modellign and get results.
+
+        Parameters
+        ----------
+        nDraws : int
+            Number of Monte Carlo steps to be carried out in each chain.
+        params : dict
+            Keyword arguments to be passed to pm.sample().  See pymc3 docs
+            for more details.
+        plot : boolean
+            If true, makes a call to BayesModel.show_results() to give a
+            visual summary of the model results.
         '''
         if self.model is None:
             raise Exception("The step 'init_model' needs to be run first.")
@@ -122,7 +150,7 @@ class BayesModel:
 
     def show_results(self):
         '''
-        
+        Visualise the results of the most recent BayesModel.start_chains()
         '''
         if self.trace:
             # Plot trace histograms
@@ -155,6 +183,8 @@ class BayesModel:
 
 def create_bayes_model(stds, comps, data, data_range, guesses=(1.0,), LL=None, plot=False):
     '''
+    THIS METHOD HAS NOW BEEN INCORPORATED INTO BayesModel. PLEASE USE THAT INSTEAD
+
     Initialised a pymc3 model using the active standards library
 
     Parameters
@@ -225,6 +255,8 @@ def create_bayes_model(stds, comps, data, data_range, guesses=(1.0,), LL=None, p
 
 def fit_bayes_model(model=None, nDraws=1000, params=None, plot=False):
     '''
+    THIS METHOD HAS NOW BEEN INCORPORATED INTO BayesModel. PLEASE USE THAT INSTEAD
+    
     Run Monte-Carlo chains on model and return fit results.
 
     Parameters

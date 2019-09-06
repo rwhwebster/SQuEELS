@@ -21,15 +21,20 @@ class LRmodel:
         Parameters
         ----------
         core_loss : Hyperspy spectrum or spectrum image
-
+            The core-loss data to be modelled.
         stds : SQuEELS Standards object
-
+            The standards library object loaded by the class method in 
+            SQuEELS.io
         comps : list of strings
-
+            The names of the references in the standards library which are
+            to be used as components in the model.
         data_range : tuple of floats
-
+            The start and end energies over which to model. Must be provided
+            as floats, ints will do weird stuff because of the way Hysperspy
+            operates.
         low_loss : Hyperspy spectrum or spectrum image
-
+            If provided, the low-loss spectrum is used to forward-convolve the
+            components standards before modelling.
         '''
         self.stds = stds
         self.comps = comps
@@ -54,6 +59,11 @@ class LRmodel:
     def _init_step(self, nav):
         '''
         Perform any preparatory steps before performing fit.
+
+        Parameters
+        ----------
+        nav : list of ints (length 2)
+            The inav coordinates of the SI to fit.
         '''
         if self.LL:
             currentL = self.LL.inav[nav]
@@ -68,7 +78,7 @@ class LRmodel:
 
     def do_multifit(self):
         '''
-        Run regression on all spectra in dataset
+        Run regression on all spectra in dataset.
         '''
         d1 = self.dims[0]
         d2 = self.dims[1]
@@ -85,6 +95,11 @@ class LRmodel:
     def plot_multifit_results(self, cmap='viridis'):
         '''
         Plot fit coefficient maps.
+
+        Parameters
+        ----------
+        cmap : string
+            the matplotlib colourmap to use for the plots.
         '''
         nComps = len(self.comps)
         nRows = np.int_(np.floor(np.sqrt(nComps)))

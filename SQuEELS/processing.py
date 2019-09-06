@@ -50,8 +50,13 @@ def extract_ZLP(s, method='fit', plot=False):
     ----------
     s : hyperspy spectrum object
         Must be a low-loss spectrum which contains the 0eV channel.
+    method : string
+        Procedure for extracting the ZLP.  Available options are:
+        - 'fit' : Fits a skewed Voigt function to the ZLP.
+        - 'reflected tail' : Creates a ZLP model by reflecting the energy
+            gain side of the ZLP about the maximum.
     plot : Boolean
-        Determines whether to plot results or not.
+        If true, plots the extracted ZLP over the low-loss data.
 
     Returns
     -------
@@ -62,7 +67,7 @@ def extract_ZLP(s, method='fit', plot=False):
     TODO
     ----
     Further testing on ZLPs of different dispersions. Confirm SkewedVoigtModel
-    is a good choice.
+    is a reasonable choice, but could benefit from further optimisation.
     '''
 
     # Spectrum must contain zero-channel
@@ -102,6 +107,8 @@ def extract_ZLP(s, method='fit', plot=False):
         tail = s.data[:reflect]
         ZLP.data[reflect:] *= 0
         ZLP.data[reflect:2*reflect-1] = tail[::-1][1:]
+    else:
+        raise Exception('Invalid extraction procedure defined in "method".')
 
     if plot:
             plt.figure()
@@ -155,13 +162,16 @@ def match_spectra_sizes(s1, s2):
     Parameters
     ----------
     s1 : Hyperspy spectrum
-
+        One of the two spectra to be size matched.
     s2 : Hyperspy spectrum
+        One of the two spectra to be size matched.
 
     Returns
     -------
-    o1, o2 : 
-
+    o1 : Hyperspy spectrum
+        The size-matched version of input s1.
+    o2 : Hyperspy spectrum
+        The size-matched version of input s2.
     '''
     l1 = len(s1.data)
     l2 = len(s2.data)
@@ -177,7 +187,7 @@ def match_spectra_sizes(s1, s2):
 
     return o1, o2
 
-def remove_stray_signal(s, sig_range, method, stray_shape='browse', smooth=True):
+def remove_stray_signal(s, sig_range, method, stray_shape=None, smooth=True):
     '''
     Method for identifying and removing stray signal under the low-loss
     spectrum.  Stray signal manifests as intensity before the zero-loss peak.
@@ -185,17 +195,29 @@ def remove_stray_signal(s, sig_range, method, stray_shape='browse', smooth=True)
     Parameters
     ----------
     s : Hyperspy spectrum
-
-    sig_range : tuple
-
-    stray_shape : string
-
+        The spectrum from which to remove signal.
+    sig_range : tuple of floats/ints
+        The start and end energies of the window over which to integrate
+        signal to determine scaling factor for stray shape.
     method : int
+        decides which procedure to use for removing stray signal. Available
+        options are:
+            - 0 : Flat subtraction of the mean value within sig_range from the
+                whole spectrum.
+            - 1 : Provide a .dm3 file with a stray shape to subtract. The shape
+            is scaled using the ratio of the intensities in sig_range
+    stray_shape : string
+        Path to the file containing the stray shape to be used for method 1.
+        If None, opens a file browser.
+    smooth : Boolean
+        If true, nulls all the data to the left of the zero-loss from the point
+        closest to the ZLP where negative intensity is encountered.  
+        This part of the method needs refined.
 
     Returns
     -------
     out : Hyperspy spectrum
-
+        The stray corrected low-loss spectrum.
     '''
     # Get scale calibration details
     xo = s.axes_manager[0].offset
@@ -213,7 +235,7 @@ def remove_stray_signal(s, sig_range, method, stray_shape='browse', smooth=True)
 
     elif method==1:
         # Load file containing stray signal
-        if stray_shape=='browse':
+        if not stray_shape:
             from tkinter import filedialog
             import tkinter as tk
             root=tk.Tk()
