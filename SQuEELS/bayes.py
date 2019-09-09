@@ -213,7 +213,7 @@ class BayesModel:
         if ret:
             return self.yx_map
 
-    def multimodel(self, nSamples=None, init_params={}, chain_params={}):
+    def multimodel(self, nSamples=None, prior_means=(1.0,), init_params={}, chain_params={}):
         '''
         Get Bayesian statistics for multiple spectra in the spectrum image.
 
@@ -222,9 +222,14 @@ class BayesModel:
         nSamples : int
             Leave as None, or specify a number of random samples to draw
             from the SI.
+        init_params : dict
+            Dictionary of arguments and kwargs taken by init_model.
+        chain_params : dict
+            Dictionary of arguments and kwargs taken by start_chains.
         Returns
         -------
-        
+        df : pandas dataframe
+            Dataframe containing the output of the monte carlo chains.
         '''
         if nSamples:
             # If true, get random selection of array coordinates
@@ -242,6 +247,7 @@ class BayesModel:
                 y = yx[i,1]
                 x = yx[i,0]
                 init_params['nav'] = [y, x]
+                init_params['mu_0'] = prior_means
                 self.init_model(**init_params)
                 self.start_chains(params=chain_params)
                 newData = {'Y': y, 'X': x, 'Trace': self.trace}
