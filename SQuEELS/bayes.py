@@ -1,7 +1,8 @@
 from __future__ import print_function
 
 import numpy as np
-import scipy as sp
+
+import pandas as pd
 
 import pymc3 as pm
 
@@ -59,7 +60,7 @@ class BayesModel:
 
 
 
-    def init_model(self, nav=None, mu_0=None, deStray=False, strayArgs={'method':1}, zlpArgs={}):
+    def init_model(self, nav=None, mu_0=None, strayArgs=None, strayKwargs={}, zlpArgs={}):
         '''
         Initialise a model for the current spectrum.  This is separate from the 
         __init__ method of the class, so that this can be repeated for multiple
@@ -84,15 +85,16 @@ class BayesModel:
             to how it is used in the forward convolution of standards.
         '''
         # Remove stray signal if requested.
-        if deStray:
-            temp = self.LL.deepcopy()
-            self.LL = remove_stray_signal(temp, deStray.pop('method'), *strayArgs)
+            
         # Forward convolve references if LL is provided
         if self.LL:
             if nav is None:
                 currentL = self.LL
             else:
                 currentL = self.LL.inav[nav]
+            if strayArgs is not None:
+                temp = currentL.deepcopy()
+                currentL = remove_stray_signal(temp, *strayArgs, **strayKwargs)
             self.stds.convolve_ready(currentL, kwargs=zlpArgs)
             self.stds.model = self.stds.conv
         else:
@@ -148,33 +150,109 @@ class BayesModel:
         if plot:
             self.show_results()
 
-    def show_results(self):
+    def show_results(self, trace=None, nav=[0,0]):
         '''
         Visualise the results of the most recent BayesModel.start_chains()
         '''
-        if self.trace:
-            # Plot trace histograms
-            pm.traceplot(self.trace)
-            stats = pm.summary(self.trace)
-            print(stats)
-            #Plot fit over data
-            xvals = self._Y.axes_manager[0].axis
-            fig, ax = plt.subplots(1,1)
-            ax.plot(xvals, self._Y.data)
-            fit = self._Y.data.copy()*0
-            for comp in self.comps:
-                par = self.stds.model[comp].data*stats['mean'][comp]
-                fit += par
-                ax.plot(xvals, par)
-            ax.plot(xvals, fit)
-            ax.legend(['Data',*self.comps,'Fit'])
-            ax.set_xlabel('Energy-loss (eV)')
-            fig.suptitle("Comparison of fit and data")
-            fig.show()
-            from pandas.plotting import scatter_matrix
-            scatter_matrix(pm.trace_to_dataframe(self.trace), figsize=(10,10))
+        if not trace:
+            try:
+                trace=self.trace
+                _Y = self._Y
+            except:
+                raise Exception('No trace provided to visualise.')
         else:
-            raise Exception('No trace has been computed to visualise.')
+            _Y = self.HL.inav[nav]
+        # Plot trace histograms
+        pm.traceplot(trace)
+        stats = pm.summary(trace)
+        print(stats)
+        #Plot fit over data
+        xvals = _Y.axes_manager[0].axis
+        fig, ax = plt.subplots(1,1)
+        ax.plot(xvals, _Y.data)
+        fit = _Y.data.copy()*0
+        for comp in self.comps:
+            par = self.stds.model[comp].data*stats['mean'][comp]
+            fit += par
+            ax.plot(xvals, par)
+        ax.plot(xvals, fit)
+        ax.legend(['Data',*self.comps,'Fit'])
+        ax.set_xlabel('Energy-loss (eV)')
+        fig.suptitle("Comparison of fit and data")
+        fig.show()
+        from pandas.plotting import scatter_matrix
+        scatter_matrix(pm.trace_to_dataframe(trace), figsize=(10,10))
+
+    def _random_sample(self, nSpectra, ret=False):
+        '''
+        Create mapping for random sampling of spectra from a spectrum image.
+
+        Note: current implementation allows scope for duplicate entries,
+            (not desirable)
+
+        Parameters
+        ----------
+        nSpectra : int
+            The number of spectra to sample from the SI.
+        ret : boolean
+            If true, function returns the list, otherwise, only assigned as
+            class attribute.
+        '''
+
+        if self.nDims < 2:
+            raise Exception('BayesModel._random_sample requires signal data with > 1 dimensions.')
+        # Create randomised list of coordinates  which lie within spectrum image
+        coords = []
+        for axis in range(self.nDims-1):
+            coords.append(np.random.randint(0, high=self.dims[axis], size=nSpectra))
+        yx_map = np.array(coords)
+        self.yx_map = yx_map.T
+
+        if ret:
+            return self.yx_map
+
+    def multimodel(self, nSamples=None, init_params={}, chain_params={}):
+        '''
+        Get Bayesian statistics for multiple spectra in the spectrum image.
+
+        Parameters
+        ----------
+        nSamples : int
+            Leave as None, or specify a number of random samples to draw
+            from the SI.
+        Returns
+        -------
+        
+        '''
+        if nSamples:
+            # If true, get random selection of array coordinates
+            yx = self._random_sample(nSamples, ret=True)
+        else:
+            # Else, generate list of coordinates that covers full array
+            raise Exception('Full array method not programmed.')
+
+        # Set up dataframe to hold model results for each spectrum
+
+        df = pd.DataFrame(columns=['Y','X','Trace',*self.comps])
+
+        for i in range(len(yx)):
+            y = yx[i,1]
+            x = yx[i,0]
+            init_params['nav'] = [y, x]
+            self.init_model(**init_params)
+            self.start_chains(params=chain_params)
+            newData = {'Y': y, 'X': x, 'Trace': self.trace}
+            for comp in self.comps:
+                newData[comp] = np.mean(self.trace.get_values(comp))
+
+            df = df.append(newData, ignore_index=True)
+
+        self.multidata = df
+
+        return df
+
+    
+
 
 # END OF CLASS
 
