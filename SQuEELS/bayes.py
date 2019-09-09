@@ -4,6 +4,8 @@ import numpy as np
 
 import pandas as pd
 
+from tqdm import tqdm
+
 import pymc3 as pm
 
 import matplotlib.pyplot as plt
@@ -235,23 +237,25 @@ class BayesModel:
 
         df = pd.DataFrame(columns=['Y','X','Trace',*self.comps])
 
-        for i in range(len(yx)):
-            y = yx[i,1]
-            x = yx[i,0]
-            init_params['nav'] = [y, x]
-            self.init_model(**init_params)
-            self.start_chains(params=chain_params)
-            newData = {'Y': y, 'X': x, 'Trace': self.trace}
-            for comp in self.comps:
-                newData[comp] = np.mean(self.trace.get_values(comp))
+        with tqdm(desc='Sampling spectra from SI', total=nSamples, unit='spectra') as pbar:
+            for i in range(nSamples):
+                y = yx[i,1]
+                x = yx[i,0]
+                init_params['nav'] = [y, x]
+                self.init_model(**init_params)
+                self.start_chains(params=chain_params)
+                newData = {'Y': y, 'X': x, 'Trace': self.trace}
+                for comp in self.comps:
+                    newData[comp] = np.mean(self.trace.get_values(comp))
 
-            df = df.append(newData, ignore_index=True)
+                df = df.append(newData, ignore_index=True)
+                pbar.update(1)
 
         self.multidata = df
 
         return df
 
-    
+
 
 
 # END OF CLASS
