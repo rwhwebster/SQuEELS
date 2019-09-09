@@ -10,15 +10,17 @@ To use this method, your reference spectra should all be contained within a sing
 
 A library can be assigned without declaring any arguments to open a file browser to use to locate the directory which contains the reference spectra;
 
-```python
-import SQuEELS as sq
+.. code-block:: python
+    
+    import SQuEELS as sq
+    
+    refs = sq.io.Standards()
 
-refs = sq.io.Standards()
-```
 
-Otherwise, a filepath can be specified like so;
+Otherwise, a path to the folder containing the standards can be specified like so;
 
-```python
-refs = sq.io.Standards(fp='c/data/references')
-```
+.. code-block:: python
+    
+    refs = sq.io.Standards(fp='c/data/references')
+
 

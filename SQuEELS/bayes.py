@@ -125,7 +125,7 @@ class BayesModel:
     def start_chains(self, nDraws=1000, params=None, plot=False):
         '''
         Once the model is initialised using BayesModel.init_model(), start
-        the Monte Carlo chains to perform the modellign and get results.
+        the Monte Carlo chains to perform the modelling and get results.
 
         Parameters
         ----------
