@@ -236,7 +236,12 @@ class BayesModel:
             yx = self._random_sample(nSamples, ret=True)
         else:
             # Else, generate list of coordinates that covers full array
-            raise Exception('Full array method not programmed.')
+            temp = []
+            for y in range(self.dims[0]):
+                for x in range(self.dims[1]):
+                    temp.append((y,x))
+            yx = np.array(temp)
+            nSamples = len(yx)
 
         # Set up dataframe to hold model results for each spectrum
 
