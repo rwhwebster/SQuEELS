@@ -4,7 +4,7 @@ import numpy as np
 
 import pandas as pd
 
-from tqdm import tqdm
+from tqdm import trange
 
 import pymc3 as pm
 
@@ -47,6 +47,8 @@ class BayesModel:
 
         if low_loss:
             self.LL = low_loss
+        else:
+            self.LL = None
 
         self.dims = core_loss.data.shape
         self.nDims = len(self.dims)
@@ -110,7 +112,7 @@ class BayesModel:
         if not mu_0:
             mu_0 = (1.0,)*len(self.comps)
         # Create pm model instance
-        with pm.Model() as self.model:
+        with pm.Model() as model:
             beta = []
             for i, comp in enumerate(self.comps):
                 beta.append(pm.Normal(comp, mu=mu_0[i], sigma=1))
@@ -126,7 +128,9 @@ class BayesModel:
 
             likelihood = pm.Normal('Y_obs', mu=mu, sigma=sigma, observed=self._Y.data)
 
-    def start_chains(self, nDraws=1000, params=None, plot=False):
+        return model
+
+    def start_chains(self, model, nDraws=1000, params=None, plot=False):
         '''
         Once the model is initialised using BayesModel.init_model(), start
         the Monte Carlo chains to perform the modelling and get results.
@@ -142,15 +146,17 @@ class BayesModel:
             If true, makes a call to BayesModel.show_results() to give a
             visual summary of the model results.
         '''
-        if self.model is None:
+        if model is None:
             raise Exception("The step 'init_model' needs to be run first.")
 
 
-        with self.model:
-            self.trace = pm.sample(nDraws, **params)
+        with model:
+            trace = pm.sample(nDraws, **params)
 
         if plot:
             self.show_results()
+
+        return trace
 
     def show_results(self, trace=None, nav=[0,0]):
         '''
@@ -213,13 +219,13 @@ class BayesModel:
         if ret:
             return self.yx_map
 
-    def multimodel(self, nSamples=None, prior_means=(1.0,), init_params={}, chain_params={}):
+    def multimodel(self, nSamples=None, prior_means=(1.0,), init_params={}, nDraws=1000, chain_params={}):
         '''
         Get Bayesian statistics for multiple spectra in the spectrum image.
 
         Parameters
         ----------
-        nSamples : int
+        nSamples : None, int or ndarray
             Leave as None, or specify a number of random samples to draw
             from the SI.
         init_params : dict
@@ -231,38 +237,56 @@ class BayesModel:
         df : pandas dataframe
             Dataframe containing the output of the monte carlo chains.
         '''
-        if nSamples:
-            # If true, get random selection of array coordinates
-            yx = self._random_sample(nSamples, ret=True)
+        if nSamples is not None:
+            ntype = type(nSamples)
+            if ntype is int:
+                # If true, get random selection of array coordinates
+                yx = self._random_sample(nSamples, ret=True)
+            elif ntype is np.ndarray:
+                # Do something
+                yx = nSamples
+                nSamples = len(yx)
+            else:
+                raise Exception('No method defined for "nSamples" input type.')
         else:
             # Else, generate list of coordinates that covers full array
             temp = []
             for y in range(self.dims[0]):
                 for x in range(self.dims[1]):
-                    temp.append((y,x))
+                    temp.append([y,x])
             yx = np.array(temp)
             nSamples = len(yx)
 
         # Set up dataframe to hold model results for each spectrum
 
-        df = pd.DataFrame(columns=['Y','X','Trace',*self.comps])
+        df = pd.DataFrame(columns=['Y','X','Trace',*self.comps,'Summary'])
 
-        with tqdm(desc='Sampling spectra from SI', total=nSamples, unit='spectra') as pbar:
-            for i in range(nSamples):
-                y = yx[i,1]
-                x = yx[i,0]
-                init_params['nav'] = [y, x]
+        import gc
+
+        #with tqdm(desc='Sampling spectra from SI', total=nSamples, unit='spectra') as pbar:
+        for i in trange(nSamples, desc='Sampling spectra from SI', unit='spectra'):
+            y = yx[i,1]
+            x = yx[i,0]
+            init_params['nav'] = [y, x]
+            if i==0:
                 init_params['mu_0'] = prior_means
-                self.init_model(**init_params)
-                self.start_chains(params=chain_params)
-                newData = {'Y': y, 'X': x, 'Trace': self.trace}
+            try:
+                qModel = self.init_model(**init_params)
+                qTrace = self.start_chains(qModel, nDraws=nDraws, params=chain_params)
+                newData = {'Y': y, 'X': x}
+                newData['Trace'] = qTrace
                 for comp in self.comps:
                     newData[comp] = np.mean(self.trace.get_values(comp))
 
                 df = df.append(newData, ignore_index=True)
-                pbar.update(1)
+            except:
+                newData = {'Y': y, 'X': x, 'Trace': np.nan}
+                for comp in self.comps:
+                    newData[comp] = np.nan
+                df = df.append(newData, ignore_index=True)
 
-        self.multidata = df
+            del(newData, qTrace, qModel)
+            gc.collect()
 
         return df
 
