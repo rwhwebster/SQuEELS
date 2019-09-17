@@ -280,6 +280,7 @@ class BayesModel:
 
                 df = df.append(newData, ignore_index=True)
             except:
+                print('Model at index '+str(i)+' has failed.')
                 newData = {'Y': y, 'X': x, 'Trace': np.nan}
                 for comp in self.comps:
                     newData[comp] = np.nan
