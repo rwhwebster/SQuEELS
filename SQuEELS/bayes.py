@@ -191,7 +191,7 @@ class BayesModel:
         from pandas.plotting import scatter_matrix
         scatter_matrix(pm.trace_to_dataframe(trace), figsize=(10,10))
 
-    def _random_sample(self, nSpectra, ret=False):
+    def _random_sample(self, nSpectra):
         '''
         Create mapping for random sampling of spectra from a spectrum image.
 
@@ -202,9 +202,11 @@ class BayesModel:
         ----------
         nSpectra : int
             The number of spectra to sample from the SI.
-        ret : boolean
-            If true, function returns the list, otherwise, only assigned as
-            class attribute.
+
+        Returns
+        -------
+        yx_map : numpy.ndarray
+            nSpectra x 2 list of array coordinates.
         '''
 
         if self.nDims < 2:
@@ -213,11 +215,36 @@ class BayesModel:
         coords = []
         for axis in range(self.nDims-1):
             coords.append(np.random.randint(0, high=self.dims[axis], size=nSpectra))
-        yx_map = np.array(coords)
-        self.yx_map = yx_map.T
+        temp = np.array(coords)
+        yx_map = temp.T
 
-        if ret:
-            return self.yx_map
+        return yx_map
+
+    def _full_sample(self):
+        '''
+        Create mapping for complete sampling of spectra from a spectrum image.
+
+        Parameters
+        ----------
+        nSpectra : int
+            The number of spectra to sample from the SI.
+
+        Returns
+        -------
+        yx_map : numpy.ndarray
+            nSpectra x 2 list of array coordinates.
+        '''
+
+        if self.nDims < 2:
+            raise Exception('BayesModel._random_sample requires signal data with > 1 dimensions.')
+        # Create randomised list of coordinates  which lie within spectrum image
+        temp = []
+        for y in range(self.dims[0]):
+            for x in range(self.dims[1]):
+                temp.append([y,x])
+        yx_map = np.array(temp)
+
+        return yx_map
 
     def multimodel(self, nSamples=None, prior_means=(1.0,), init_params={}, nDraws=1000, chain_params={}):
         '''
@@ -239,27 +266,21 @@ class BayesModel:
         '''
         if nSamples is not None:
             ntype = type(nSamples)
-            if ntype is int:
-                # If true, get random selection of array coordinates
+            if ntype is int: # If int, get random selection of array coordinates
                 yx = self._random_sample(nSamples, ret=True)
-            elif ntype is np.ndarray:
-                # Do something
+            elif ntype is np.ndarray: # if ndarray, no more needs done
                 yx = nSamples
-                nSamples = len(yx)
             else:
                 raise Exception('No method defined for "nSamples" input type.')
         else:
             # Else, generate list of coordinates that covers full array
-            temp = []
-            for y in range(self.dims[0]):
-                for x in range(self.dims[1]):
-                    temp.append([y,x])
-            yx = np.array(temp)
-            nSamples = len(yx)
+            yx = self._full_sample()
+
+        nSamples = len(yx) # Number of different samples in dataset
 
         # Set up dataframe to hold model results for each spectrum
 
-        df = pd.DataFrame(columns=['Y','X','Trace',*self.comps,'Summary'])
+        df = pd.DataFrame(columns=['Y','X','Trace',*self.comps])
 
         import gc
 
