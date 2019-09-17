@@ -6,6 +6,7 @@ import pandas as pd
 
 from tqdm import trange
 
+import theano
 import pymc3 as pm
 
 import matplotlib.pyplot as plt
