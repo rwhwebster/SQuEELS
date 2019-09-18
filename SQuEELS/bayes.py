@@ -1,5 +1,7 @@
 from __future__ import print_function
 
+import gc
+
 import numpy as np
 
 import pandas as pd
@@ -265,6 +267,8 @@ class BayesModel:
         df : pandas dataframe
             Dataframe containing the output of the monte carlo chains.
         '''
+
+        # First, establish list of array coordinates to operate over
         if nSamples is not None:
             ntype = type(nSamples)
             if ntype is int: # If int, get random selection of array coordinates
@@ -279,13 +283,20 @@ class BayesModel:
 
         nSamples = len(yx) # Number of different samples in dataset
 
-        # Set up dataframe to hold model results for each spectrum
-
+        # Second, set up dataframe to hold model results for each spectrum
         df = pd.DataFrame(columns=['Y','X','Trace',*self.comps])
 
-        import gc
+        # Third, create the bare-bones of a pymc3 model
+        with pm.Model() as model:
+            beta = []
+            for i, comp in enumerate(self.comps):
+                beta.append(pm.Normal(comp, mu=mu_0[i], sigma=1.0))
+            sigma = pm.HalfCauchy('sigma', beta=10, testval=1.)
 
-        #with tqdm(desc='Sampling spectra from SI', total=nSamples, unit='spectra') as pbar:
+        # Fourth, take the first point in yx to create a theano.shared instance
+        data = theano.shared(self.HL.inav[yx[0,1], yx[0,0]].data)
+
+
         for i in trange(nSamples, desc='Sampling spectra from SI', unit='spectra'):
             y = yx[i,1]
             x = yx[i,0]
@@ -313,7 +324,112 @@ class BayesModel:
 
         return df
 
+    def _map_yx(self, nSamples):
+        '''
+        Method which decides how to construct list of array coordinates based
+        on the type of data provded to nSamples.
 
+        Parameters
+        ----------
+        nSamples : None, int or ndarray
+
+        Returns
+        -------
+        yx : ndarray
+
+        '''
+        if nSamples is not None:
+            ntype = type(nSamples)
+            if ntype is int: # If int, get random selection of array coordinates
+                yx = self._random_sample(nSamples, ret=True)
+            elif ntype is np.ndarray: # if ndarray, no more needs done
+                yx = nSamples
+            else:
+                raise Exception('No method defined for "nSamples" input type.')
+        else:
+            # Else, generate list of coordinates that covers full array
+            yx = self._full_sample()
+
+        return yx
+
+    def simple_multimodel(self, nSamples=None, prior_means=None, init_params={}, nDraws=1000, chain_params={}):
+        '''
+        Get Bayesian statistics for multiple spectra in the spectrum image.
+        Provides no scope for forward convolution of references.
+
+        Parameters
+        ----------
+        nSamples : None, int or ndarray
+            Leave as None, or specify a number of random samples to draw
+            from the SI.
+        init_params : dict
+            Dictionary of arguments and kwargs taken by init_model.
+        chain_params : dict
+            Dictionary of arguments and kwargs taken by start_chains.
+        Returns
+        -------
+        df : pandas dataframe
+            Dataframe containing the output of the monte carlo chains.
+        '''
+        if prior_means is None:
+            mu_0 = (1.0,)*len(self.comps)
+        else:
+            mu_0 = prior_means
+        # First, establish list of array coordinates to operate over
+        yx = self._map_yx(nSamples)
+        nSamples = len(yx) # Number of different samples in dataset
+
+        # Second, set up dataframe to hold model results for each spectrum
+        df = pd.DataFrame(columns=['Y','X','Trace',*self.comps])
+
+        # Third, prepare observed data and references as theano.shared instances
+        # Observable data
+        data = theano.shared(self.HL.inav[yx[0,1], yx[0,0]].data) # Use first point in coordinate list 'yx'
+        # Reference spectra
+        self.stds.model = dict()
+        for ref in self.stds.ready:
+            self.stds.model[ref] = theano.shared(self.stds.ready[ref].data)
+
+        # Fourth, create the bare-bones of a pymc3 model
+        with pm.Model() as model:
+            beta = []
+            for i, comp in enumerate(self.comps):
+                beta.append(pm.Normal(comp, mu=mu_0[i], sigma=1.0))
+            sigma = pm.HalfCauchy('sigma', beta=10, testval=1.)
+
+            mu = None
+
+            for i, comp in enumerate(self.comps):
+                if mu is None:
+                    mu = beta[i]*self.stds.model[comp]
+                else:
+                    mu += beta[i]*self.stds.model[comp]
+
+            pm.Normal('Y_obs', mu=mu, sigma=sigma, observed=data)
+        # End of model declaration
+
+        # Fifth, run loop over spectra to calculate traces        
+        for i in trange(nSamples, desc='Sampling spectra from SI', unit='spectra'):
+            y = yx[i,1]
+            x = yx[i,0]
+            # Update shared data to current spectrum
+            data.set_value(self.HL.inav[y,x].data)
+            # Prepare results dict
+            results = {'Y':y, 'X':x}
+            #try:
+            with model:
+                results['Trace'] = pm.sample(nDraws, **chain_params)
+            for comp in self.comps:
+               results[comp] = np.mean(results['Trace'].get_values(comp))
+            # except:
+            #     print('Model at index '+str(i)+' has failed.')
+            #     results['Trace'] = np.nan
+            #     for comp in self.comps:
+            #         results[comp] = np.nan
+            # Append current results to dataframe
+            df = df.append(results, ignore_index=True)
+
+        return df
 
 
 # END OF CLASS
