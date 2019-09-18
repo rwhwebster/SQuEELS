@@ -287,10 +287,16 @@ class BayesModel:
         nSamples : None, int or ndarray
             Leave as None, or specify a number of random samples to draw
             from the SI.
+        prior_means : None or tuple of floats
+            Initial guesses for each of the components to be fed to the model
         init_params : dict
             Dictionary of arguments and kwargs taken by init_model.
+        nDraws : int
+            The number of monte carlo iterations each chain should run.
+            The number of chains can be specified in chain_params.
         chain_params : dict
             Dictionary of arguments and kwargs taken by start_chains.
+            
         Returns
         -------
         df : pandas dataframe
