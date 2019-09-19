@@ -321,7 +321,7 @@ class BayesModel:
         data = theano.shared(self.HL.inav[yx[0,1], yx[0,0]].data) # Use first point in coordinate list 'yx'
         # Reference spectra
         self.stds.model = dict()
-        for ref in self.stds.ready:
+        for ref in self.comps:
             self.stds.model[ref] = theano.shared(self.stds.ready[ref].data)
 
         # Fourth, create the bare-bones of a pymc3 model
