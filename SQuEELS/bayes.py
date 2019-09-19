@@ -277,7 +277,7 @@ class BayesModel:
 
         return yx
 
-    def simple_multimodel(self, nSamples=None, prior_means=None, init_params={}, nDraws=1000, chain_params={}):
+    def simple_multimodel(self, nSamples=None, prior_means=None, init_params={}, nDraws=1000, chain_params={}, retain_trace=False):
         '''
         Get Bayesian statistics for multiple spectra in the spectrum image.
         Provides no scope for forward convolution of references.
@@ -296,7 +296,10 @@ class BayesModel:
             The number of chains can be specified in chain_params.
         chain_params : dict
             Dictionary of arguments and kwargs taken by start_chains.
-            
+        retain_trace : bool
+            If true, the raw trace data is included in the dataframe.
+            WARNING: This method consumes a lot of memory.
+
         Returns
         -------
         df : pandas dataframe
@@ -339,7 +342,7 @@ class BayesModel:
             pm.Normal('Y_obs', mu=mu, sigma=sigma, observed=data)
         # End of model declaration
 
-        # Fifth, run loop over spectra to calculate traces        
+        # Final stage is to run loop over spectra to calculate traces        
         for i in trange(nSamples, desc='Sampling spectra from SI', unit='spectra'):
             y = yx[i,1]
             x = yx[i,0]
@@ -347,16 +350,23 @@ class BayesModel:
             data.set_value(self.HL.inav[y,x].data)
             # Prepare results dict
             results = {'Y':y, 'X':x}
-            #try:
-            with model:
-                results['Trace'] = pm.sample(nDraws, **chain_params)
-            for comp in self.comps:
-               results[comp] = np.mean(results['Trace'].get_values(comp))
-            # except:
-            #     print('Model at index '+str(i)+' has failed.')
-            #     results['Trace'] = np.nan
-            #     for comp in self.comps:
-            #         results[comp] = np.nan
+            try:
+                with model:
+                    results['Trace'] = pm.sample(nDraws, **chain_params)
+                smry = pm.summary(results['Trace'])
+                for comp in self.comps:
+                   results[comp] = np.mean(results['Trace'].get_values(comp))
+                   results[comp+' sd'] = smry['sd'][comp]
+                   results[comp+' hpd_97.5'] = smry['hpd_97.5'][comp]
+                   results[comp+' hpd_2.5'] = smry['hpd_2.5'][comp]
+            except:
+                print('Model at index '+str(i)+' has failed.')
+                results['Trace'] = np.nan
+                for comp in self.comps:
+                   results[comp] = np.nan
+                   results[comp+' sd'] = np.nan
+                   results[comp+' hpd_97.5'] = np.nan
+                   results[comp+' hpd_2.5'] = np.nan
             # Append current results to dataframe
             df = df.append(results, ignore_index=True)
 
