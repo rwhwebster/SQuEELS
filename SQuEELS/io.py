@@ -111,7 +111,8 @@ class Standards:
                     spec.axes_manager[0].size = len(new)
                 else:
                     # Crop spectrum down
-                    spec.crop(start=start, end=end, axis=0)
+                    # spec.crop(start=start, end=end, axis=0)
+                    spec = spec.isig[start:]
                 # Add spectrum to ready list
                 self.ready[ref] = spec
 
