@@ -44,6 +44,8 @@ class LRmodel:
 
         if low_loss:
             self.LL = low_loss
+        else:
+            self.LL = None
         # Check how many dimensions there are and crop data to fit range
         self.dims = core_loss.data.shape
         self.nDims = len(self.dims)

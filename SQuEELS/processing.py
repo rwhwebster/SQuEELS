@@ -64,9 +64,8 @@ def extract_ZLP(s, method='fit', plot=False):
         spectrum identical to s, but data contains only the extracted zero-loss
         peak.
 
-    TODO
-    ----
-    Further testing on ZLPs of different dispersions. Confirm SkewedVoigtModel
+    
+    TO DO: Further testing on ZLPs of different dispersions. Confirm SkewedVoigtModel
     is a reasonable choice, but could benefit from further optimisation.
     '''
 
