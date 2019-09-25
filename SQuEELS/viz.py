@@ -12,9 +12,11 @@ plt.ion()
 
 class FitInspector:
     '''
+    Class for handling visualisation actions on model results.
 
     '''
     def __init__(self, data, stds, coeffs, data_range, low_loss=None):
         '''
-
+        
         '''
+        
