@@ -24,3 +24,6 @@ Otherwise, a path to the folder containing the standards can be specified like s
     refs = sq.io.Standards(fp='c/data/references')
 
 
+Where the directory ``c/data/references`` contains a set of *.dm3 files each containing a single 1d spectrum which can be used as a reference spectrum.
+
+

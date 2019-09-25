@@ -1,7 +1,7 @@
 .. _bayes:
 
 **********
-Creating a Bayesian Model
+Creating a Bayesian Model Instance
 **********
 
 To create a Bayesian model to quantify a spectrum, we first need to have references loaded, as per the instructions on the Standards page, as well as having loaded some data to model.
@@ -26,34 +26,17 @@ With this data loaded, we can go on to initialise a model object, using the clas
 
     our_model = sq.bayes.BayesModel(HL, refs, components, model_range) # The model-object initialisation
 
-Additionally, if we wish to convolve/deconvolve our core-loss data using a low-loss spectrum, this can be done by adjusting our call to the model to include the low-loss data like so:
 
-.. code-block:: python
-
-    our_model = sq.bayes.BayesModel(high_loss, refs, components, model_range, low_loss=LL)
-
-Initialising the model
+Executing the model
 ======================
 
-Once the model object has been created, it is necessary to further intialise the model parameters using the ``BayesModel.init_model`` method.  This can be called with or without arguments as the situation requires.  Here are a few use cases:
+Once the model instance has been created, it can be executed using the ``BayesModel.simple_multimodel`` method.  This can be called in such a way as to allow fitting of specific spectra in a spectrum image (SI), randomly sample spectra in the SI, or model the full SI.  A typical call to ``simple_multimodel`` may look like:
 
 .. code-block:: python
-    
-    # For when a single spectrum has been provided, and no guesses about the results can be made.
-    our_model.init_model()
+    to_sample = np.array([[1,0],[2,1]])
+    guesses = (10.0, 1.0, 5.0)
+    chain_params = {'init':'advi+adapt_diag', 'cores':4,'chains':8, 'progressbar':False}
 
-    # If a spectrum image has been provided, the coordinates 
-    # of the specific spectrum to be fitted are required
-    our_model.init_model(nav=[1,1])
+    df = our_model.simple_multimodel(nSamples=to_sample, prior_means=guesses, nDraws=1000, chain_params=chain_params)
 
-    # If there is prior knowledge about the quantities to be fitted,
-    # guesses can be provided to improve the priors.
-    our_model.init_model(mu_0=(5.0, 5.0, 10))
-    # Note the order of the guesses mu_0 matches the order we provided the components earlier.
-
-For other arguments when calling ``BayesModel.init_model`` please refer to the docstrings.
-
-Executing the fit
-=================
-
-After initialising the model for the current spectrum, a monte carlo estimation of the parameters can be run by using the method ``BayesModel.start_chains``.  
+The output of ``simple_multimodel`` is a pandas dataframe which contains the MCMC outputs and some summary statistics.  Inspection of these can be done manually using visualisation methods available through matplotlib, pandas and pymc3.  Future versions of SQuEELS will provide handles to some common calls.
