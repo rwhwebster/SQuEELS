@@ -26,7 +26,9 @@ class TestStandards(unittest.TestCase):
         lib = sqio.Standards(fp=self.tmp_dir)
 
         expected = ['Cu', 'Ni', 'Ti', 'V']
-        assert expected == list(lib.data.keys())
+        actual = list(lib.data.keys())
+        actual.sort()
+        assert expected == actual
 
     def test_active(self):
         lib = sqio.Standards(fp=self.tmp_dir)
@@ -34,7 +36,10 @@ class TestStandards(unittest.TestCase):
         lib.set_active_standards(['Ti', 'V'])
 
         expected = [False, False, True, True]
-        assert expected == list(lib.active.values())
+        actual = []
+        for item in ['Cu', 'Ni', 'Ti', 'V']:
+            actual.append(lib.active[item])
+        assert expected == actual
 
     @classmethod
     def tearDownClass(self):
