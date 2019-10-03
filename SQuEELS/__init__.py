@@ -11,9 +11,9 @@ del(sys)
 
 __all__ = [
     'fourier_tools',
-    'quantify',
     'processing',
     'io',
+    'quantify',
     'bayes']
 
 for x in __all__:
