@@ -277,7 +277,7 @@ class BayesModel:
 
         return yx
 
-    def simple_multimodel(self, nSamples=None, prior_means=None, init_params={}, nDraws=1000, chain_params={}, retain_trace=False):
+    def simple_multimodel(self, width=1.0, nSamples=None, prior_means=None, init_params={}, nDraws=1000, chain_params={}, retain_trace=False):
         '''
         Get Bayesian statistics for multiple spectra in the spectrum image.
         Provides no scope for forward convolution of references.
@@ -328,8 +328,8 @@ class BayesModel:
         with pm.Model() as model:
             beta = []
             for i, comp in enumerate(self.comps):
-                beta.append(pm.Normal(comp, mu=mu_0[i], sigma=1.0))
-            sigma = pm.HalfCauchy('sigma', beta=10, testval=1.)
+                beta.append(pm.Normal(comp, mu=mu_0[i], sigma=width))
+            sigma = pm.HalfCauchy('sigma', beta=10, testval=width)
 
             mu = None
 
