@@ -41,6 +41,49 @@ class TestStandards(unittest.TestCase):
             actual.append(lib.active[item])
         assert expected == actual
 
+    def test_range_crop_case_A(self):
+        # crop when both limits are within data range
+        lib = sqio.Standards(fp=self.tmp_dir)
+        lib.set_active_standards(['Ti'])
+        lib.set_spectrum_range(500.0, 600.0)
+
+    def test_range_crop_case_B(self):
+        # crop when left limit is beyond data range
+        lib = sqio.Standards(fp=self.tmp_dir)
+        lib.set_active_standards(['Ti'])
+        lib.set_spectrum_range(300.0, 600.0)
+
+    def test_range_crop_case_C(self):
+        # crop when right limit is beyond data range
+        lib = sqio.Standards(fp=self.tmp_dir)
+        lib.set_active_standards(['Ti'])
+        lib.set_spectrum_range(500.0, 1500.0)
+
+    def test_range_crop_case_D(self):
+        # crop when both limits are beyond data range
+        lib = sqio.Standards(fp=self.tmp_dir)
+        lib.set_active_standards(['Ti'])
+        lib.set_spectrum_range(300.0, 1500.0)
+
+    def test_normalisation_case_A(self):
+        lib = sqio.Standards(fp=self.tmp_dir)
+
+        lib.set_active_standards(['Ti','Ni'])
+
+        lib.set_spectrum_range(400.0, 1000.0)
+
+        lib.normalise(logscale=False)
+
+    def test_normalisation_case_B(self):
+        # log normalisation
+        lib = sqio.Standards(fp=self.tmp_dir)
+
+        lib.set_active_standards(['Ti','Ni'])
+
+        lib.set_spectrum_range(400.0, 1000.0)
+
+        lib.normalise(logscale=True)
+
     @classmethod
     def tearDownClass(self):
         shutil.rmtree(self.tmp_dir)

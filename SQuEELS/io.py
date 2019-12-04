@@ -90,7 +90,7 @@ class Standards:
         # Create a dictionary of standards which have been treated and ready
         # for fitting
         self.crops = dict()
-        if not self.ready:
+        if not hasattr(self, 'ready'):
             self.ready = dict()
         # Iterate through all active standards
         for ref in self.data:
@@ -100,7 +100,13 @@ class Standards:
                 try:
                     spec.crop(start=0, end=end, axis=0)
                 except:
-                    raise Exception('Something went wrong cropping the high-loss end.')
+                    #raise Exception('Something went wrong cropping the high-loss end.')
+                    # If cropping the high-loss end fails, print warning and
+                    # pad instead.
+                    print('Warning, high-loss limit extends beyond the range of reference "', ref, '".')
+                    print('Spectrum will been padded, which may impact quantification.')
+                    print('')
+                    # nPad = int(np.round(end - ))
                 # Next, crop/pad low-loss end
                 offset = spec.axes_manager[0].offset
                 if start < offset:
@@ -134,9 +140,9 @@ class Standards:
         self.normed = dict()
         self.norm_coeffs = dict()
 
-        if self.ready not None:
-            for ref in self.ready[ref]:
-                spec = ref.deepcopy()
+        if hasattr(self, 'ready'):
+            for ref in self.ready:
+                spec = self.ready[ref].deepcopy()
                 if logscale:
                     spec = np.log(spec)
                 scale_factor = np.sum(spec.data)
