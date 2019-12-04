@@ -89,7 +89,9 @@ class Standards:
 
         # Create a dictionary of standards which have been treated and ready
         # for fitting
-        self.ready = dict()
+        self.crops = dict()
+        if not self.ready:
+            self.ready = dict()
         # Iterate through all active standards
         for ref in self.data:
             if self.active[ref] is True:
@@ -114,7 +116,37 @@ class Standards:
                     # spec.crop(start=start, end=end, axis=0)
                     spec = spec.isig[start:]
                 # Add spectrum to ready list
+                self.crops[ref] = spec
                 self.ready[ref] = spec
+
+    def normalise(self, logscale=False):
+        '''
+        Scales the integrated intensity of range-set references to 1.
+
+        Should only be used in conjunction with set_spectrum_range.
+
+        Parameters
+        ----------
+        logscale : Boolean
+            Sets whether normalisation of references is preceded by 
+            taking the natural logarithm.
+        '''
+        self.normed = dict()
+        self.norm_coeffs = dict()
+
+        if self.ready not None:
+            for ref in self.ready[ref]:
+                spec = ref.deepcopy()
+                if logscale:
+                    spec = np.log(spec)
+                scale_factor = np.sum(spec.data)
+                spec /= scale_factor
+                # Write the scaled reference, along with factor, to class
+                self.normed[ref] = spec
+                self.norm_coeffs[ref] = scale_factor
+                self.ready[ref] = spec
+        else:
+            raise Exception("Cropped reference spectra not found.")
 
     def set_all_inactive(self):
         '''
@@ -127,8 +159,8 @@ class Standards:
         '''
         Convolve the prepared reference spectra with a low loss spectrum.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         LL : Hyperspy spectrum object
             The low-loss spectrum the core-loss edges are to be convolved with   
         kwargs : dict or None
