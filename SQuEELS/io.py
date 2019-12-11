@@ -3,7 +3,6 @@ from __future__ import print_function
 import sys
 import os
 
-
 import numpy as np
 import scipy as sp
 
@@ -11,6 +10,60 @@ import hyperspy.api as hs
 
 from .fourier_tools import reverse_fourier_ratio_convoln
 
+
+class Data:
+    def __init__(self, fp=None, DEELS=False, LL=None):
+        '''
+        Class to handle data and data operations.
+
+        Parameters
+        ----------
+        fp : str
+            If not None, this string is the full filepath of the data file
+            to be loaded.
+        DEELS : boolean
+            If true, load in accompanying low-loss data also.
+        '''
+
+        if fp is None:
+            from tkinter import filedialog
+            import tkinter as tk
+            root = tk.Tk()
+            root.withdraw()
+            fp = filedialog.askopenfilename(filetypes=(("Gatan Files", "*.dm3"),),
+                title="Choose Core-Loss Data")
+
+
+        self.raw = hs.load(fp)
+        self.data = self.raw
+        self.info = "Raw data loaded. "
+
+        if DEELS:
+            if LL is None:
+                from tkinter import filedialog
+                import tkinter as tk
+                root = tk.Tk()
+                root.withdraw()
+                LL = filedialog.askopenfilename(filetypes=(("Gatan Files", "*.dm3"),),
+                    title="Choose accompanying Low-Loss Data")
+
+            self.LL = hs.load(LL)
+
+    def normalise(self):
+        '''
+        Scales the maximum intensity to 1.
+
+        '''
+        self.data /= np.max(self.data.data)
+
+        self.info += "Intensities normalised. "
+
+    def apply_logscale(self):
+        '''
+        Take the natural logarithm of the data.
+        '''
+        self.data = np.log(self.data)
+        self.info += "Intensities log-scaled. "
 
 class Standards:
     def __init__(self, fp=None):
