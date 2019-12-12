@@ -210,7 +210,7 @@ class Standards:
                     spec.data = np.nan_to_num(spec.data, 
                         copy=True, nan=0.0, posinf=0.0, neginf=0.0)
                     spec.data[spec.data<0.0] = 0.0
-                scale_factor = np.sum(spec.data)
+                scale_factor = np.max(spec.data)
                 spec /= scale_factor
                 # Write the scaled reference, along with factor, to class
                 self.normed[ref] = spec
