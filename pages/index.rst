@@ -11,6 +11,7 @@ The SQuEELS package is designed to provide code for straightforward implementati
 
    install
    standards
+   data
    bayes
    refs
    SQuEELS
