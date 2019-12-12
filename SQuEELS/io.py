@@ -61,9 +61,18 @@ class Data:
     def apply_logscale(self):
         '''
         Take the natural logarithm of the data.
+        Handles log issues by setting affected values to zero.
         '''
         self.data = np.log(self.data)
+        self.data.data = np.nan_to_num(self.data.data, 
+            copy=True, nan=0.0, posinf=0.0, neginf=0.0)
         self.info += "Intensities log-scaled. "
+
+    def plot(self):
+        '''
+        Call to hyperspy SI plotting routine to save keystrokes.
+        '''
+        self.data.plot()
 
 class Standards:
     def __init__(self, fp=None):
@@ -198,6 +207,9 @@ class Standards:
                 spec = self.ready[ref].deepcopy()
                 if logscale:
                     spec = np.log(spec)
+                    spec.data = np.nan_to_num(spec.data, 
+                        copy=True, nan=0.0, posinf=0.0, neginf=0.0)
+                    spec.data[spec.data<0.0] = 0.0
                 scale_factor = np.sum(spec.data)
                 spec /= scale_factor
                 # Write the scaled reference, along with factor, to class
