@@ -20,11 +20,12 @@ class BayesModel:
     '''
     Class for handling Bayesian analysis of elemental composition.
     '''
-    def __init__(self, core_loss, stds, comps, data_range, low_loss=None):
+    def __init__(self, core_loss, stds, comps, data_range, low_loss=None,
+        normalise=True, lognorm=False):
         '''
         Parameters
         ----------
-        core_loss : Hyperspy spectrum (image)
+        core_loss : SQuEELS Data object
             The core-loss data to be modelled.  Can be single spectrum or
             spectrum image.
         stds : SQuEELS Standards object
@@ -40,6 +41,11 @@ class BayesModel:
         low_loss : Hyperspy spectrum (image)
             If provided, the low-loss spectrum is used to forward-convolve the
             components standards before modelling.
+        normalise : boolean
+            If True, normalises intensities of data and references.
+        lognorm : boolean
+            If True, takes the natural log of data and references before
+            normalisation.
         '''
 
         self.stds = stds
@@ -53,17 +59,23 @@ class BayesModel:
         else:
             self.LL = None
 
-        self.dims = core_loss.data.shape
+        self.dims = core_loss.data.data.shape
         self.nDims = len(self.dims)
-        sigDim = core_loss.axes_manager.signal_indices_in_array[0]
+        sigDim = core_loss.data.axes_manager.signal_indices_in_array[0]
 
         try:
-            self.HL = core_loss.deepcopy()
-            self.HL.crop(start=data_range[0], end=data_range[1], axis=sigDim)
+            self.HL = core_loss
+            self.HL.data.crop(start=data_range[0], end=data_range[1], axis=sigDim)
         except:
             raise Exception('Something went wrong cropping core-loss data.')
 
         self.stds.set_spectrum_range(*data_range)
+
+        if normalise:
+            self.stds.normalise(logscale=lognorm)
+            if lognorm:
+                self.HL.apply_logscale()
+            self.HL.normalise()
 
 
 
@@ -318,7 +330,7 @@ class BayesModel:
 
         # Third, prepare observed data and references as theano.shared instances
         # Observable data
-        data = theano.shared(self.HL.inav[yx[0,1], yx[0,0]].data) # Use first point in coordinate list 'yx'
+        data = theano.shared(self.HL.data.inav[yx[0,1], yx[0,0]].data) # Use first point in coordinate list 'yx'
         # Reference spectra
         self.stds.model = dict()
         for ref in self.comps:
@@ -347,7 +359,7 @@ class BayesModel:
             y = yx[i,1]
             x = yx[i,0]
             # Update shared data to current spectrum
-            data.set_value(self.HL.inav[y,x].data)
+            data.set_value(self.HL.data.inav[y,x].data)
             # Prepare results dict
             results = {'Y':y, 'X':x}
             try:
