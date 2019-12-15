@@ -61,7 +61,7 @@ def fourier_ratio_deconvolution(HL, LL, pad=True, ZLPmodel='fit', plot=False):
 
     return deconv
 
-def reverse_fourier_ratio_convoln(HL, LL, pad=True, ZLPmodel='fit', plot=False):
+def fourier_ratio_convolution(HL, LL, pad=True, ZLPmodel='fit', plot=False):
     '''
     Function for performing Fourier-Ratio deconvolution using a zero-loss
     modifier.  Created because it is unclear what the deconvolution 
