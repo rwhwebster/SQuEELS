@@ -10,6 +10,7 @@ if sys.version_info > (3, 0):
 del(sys)
 
 __all__ = [
+    'utils',
     'fourier_tools',
     'processing',
     'io',
