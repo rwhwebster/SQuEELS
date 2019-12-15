@@ -36,7 +36,7 @@ class TestBayes(unittest.TestCase):
     def test_model_creation(self):
         lib = sqio.Standards(fp=self.ref_dir)
 
-        SI = hs.load(os.path.join(self.dat_dir, 'deconv.dm3'))
+        SI = sqio.Data(fp=os.path.join(self.dat_dir, 'deconv.dm3'))
 
         model = sqb.BayesModel(SI, lib, ['Ti'], (400.0, 480.0))
 
