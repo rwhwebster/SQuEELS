@@ -35,7 +35,7 @@ def generate_hann_window(dims, direction=0):
         window_swapped[i] = np.cos(2*np.pi*i/dims[direction]) # This is only valid for 'right'
 
     window = np.swapaxes(window_swapped, 0, direction)
-    
+
     window = 0.5 * window + 0.5
 
     return window
@@ -65,12 +65,12 @@ def pad_spectrum(s, nLen):
     a0 = np.mean(s.data[-20:])
     # Create data to fill pad.
     # TODO Generalise to make other methods implementable
-    vals = make_hann_window(diff)
+    vals = generate_hann_window(diff)
     vals *= a0
     # Update data in out
     out.data = np.zeros((nLen))
     out.data[:oLen] = s.data
-    out.data[oLen:oLen+diff/2] = vals[:diff/2]
+    out.data[oLen:int(oLen+diff/2)] = vals[:int(diff/2)]
 
     return out
 
@@ -100,7 +100,7 @@ def match_spectra_sizes(s1, s2):
     # then add 1 to N to ensure reasonably sized padding region
     n1 = int(np.ceil(np.log2(l1)))
     n2 = int(np.ceil(np.log2(l2)))
-    N = max(n1,n2) + 1
+    N = max(n1,n2) + 4
 
     k = pow(2, N)
 
@@ -108,3 +108,99 @@ def match_spectra_sizes(s1, s2):
     o2 = pad_spectrum(s2, k)
 
     return o1, o2
+
+def generate_reflected_tail(s, centreChannel, threshold):
+    '''
+    Takes the input spectrum, s, and returns only the largest peak, replacing
+    other data present using the reflected tail method.
+
+    Parameters
+    ----------
+    s : hyperspy spectrum
+
+    centreChannel : int
+
+    threshold : float
+        Fraction of max peak intensity which is used to define where tails
+        are taken from.
+
+    Returns
+    -------
+    out : hyperspy spectrum
+
+    '''
+    out = s.deepcopy()
+
+    # Seek left of peak for threshold
+    amp = s.data[centreChannel]
+    current = amp
+    i = centreChannel
+    while (current/amp) > threshold:
+        i -= 1
+        current = s.data[i]
+    left = i
+    # now seek right
+    current = amp
+    i = centreChannel
+    while (current/amp) > threshold:
+        i += 1
+        current = s.data[i]
+    right = i
+    # Extract tail and reflect, removing other data
+    tail = s.data[:left]
+    out.data[right:] = 0.0
+    out.data[right:right+left] = tail[::-1]
+
+    return out
+
+
+def extract_ZLP(s, method='reflected tail', threshold=0.02, plot=False):
+    '''
+    Examines spectrum s for zero-loss peak and returns a dataset of the same
+    dimensions, but which only contains the ZLP.
+
+    Parameters
+    ----------
+    s : hyperspy spectrum object
+        Must be a low-loss spectrum which contains the 0eV channel.
+    method : string
+        Procedure for extracting the ZLP.  Available options are:
+        - 'fit' : Fits a skewed Voigt function to the ZLP.
+        - 'reflected tail' : Creates a ZLP model by reflecting the energy
+            gain side of the ZLP about the maximum.
+    threshold : float
+        For use with reflected tail method, determines cutoff for tail.
+    plot : Boolean
+        If true, plots the extracted ZLP over the low-loss data.
+
+    Returns
+    -------
+    ZLP : hyperspy spectrum object
+        spectrum identical to s, but data contains only the extracted zero-loss
+        peak.
+
+    
+    TO DO: Further testing on ZLPs of different dispersions. Confirm SkewedVoigtModel
+    is a reasonable choice, but could benefit from further optimisation.
+    '''
+
+    offset = s.axes_manager[0].offset
+    scale = s.axes_manager[0].scale
+    zlpChannel = -offset/scale
+    if zlpChannel < 0 or zlpChannel > s.axes_manager[0].size:
+        raise Exception('Spectrum provided does not contain the 0eV channel.')
+    zlpChannel = np.argmax(s.data)
+
+    methods = { 'reflected tail' : generate_reflected_tail(s, zlpChannel, threshold),
+                'fit' : print("method needs updated.")
+    }
+
+    ZLP = methods.get(method)
+
+    if plot:
+            plt.figure()
+            plt.plot(s.data, label='data')
+            plt.plot(ZLP.data, label=method+' model')
+            plt.show()
+
+    return ZLP
