@@ -8,7 +8,7 @@ import scipy as sp
 
 import hyperspy.api as hs
 
-from .fourier_tools import reverse_fourier_ratio_convoln
+from .fourier_tools import fourier_ratio_convolution
 
 
 class Data:
