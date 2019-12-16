@@ -6,6 +6,8 @@ import os
 import numpy as np
 import scipy as sp
 
+from tqdm import tqdm
+
 import hyperspy.api as hs
 
 from .fourier_tools import fourier_ratio_convolution
@@ -198,6 +200,8 @@ class Standards:
                 # Add spectrum to ready list
                 self.crops[ref] = spec
                 self.ready[ref] = spec
+                self.lims = (start, end)
+                self.nDat = spec.axes_manager[0].size
 
     def normalise(self, logscale=False):
         '''
@@ -238,21 +242,40 @@ class Standards:
         for item in self.active:
             self.active[item] = False
 
-    def convolve_ready(self, LL, kwargs=None):
+    def convolve_ready(self, LL, ZLPkwargs=None, padkwargs=None):
         '''
         Convolve the prepared reference spectra with a low loss spectrum.
+        If using a spectrum image, this generates a map of the same spatial
+        dimensions using each reference, so that the deconvolution is unique
+        to each spectrum in the low-loss.
 
         Parameters
         ----------
-        LL : Hyperspy spectrum object
+        LL : Hyperspy signal object
             The low-loss spectrum the core-loss edges are to be convolved with   
-        kwargs : dict or None
-            keyword arguments for the convolution function.
+        ZLPkwargs : dict or None
+            keyword arguments for the ZLP extraction.
+        padkwargs : dict or None
+            keyword arguments for spectral padding.
         '''
-        if not kwargs:
-            kwargs = {}
 
         self.conv = dict()
+        self.mapped = dict()
+        # Get dimensions of LL signal
+        dims = list(LL.data.shape)
+        dims[-1] = self.nDat # Determined during set_spectrum_range
 
         for ref in self.ready:
-            self.conv[ref] = reverse_fourier_ratio_convoln(self.ready[ref], LL, **kwargs)
+            mapped = LL.deepcopy()
+            mapped.data = np.zeros(dims)
+            mapped.axes_manager[-1].offset = self.lims[0]
+            mapped.axes_manager[-1].size = self.nDat
+            mapped.data[...,:] = self.ready[ref].data
+            self.mapped[ref] = mapped
+
+        with tqdm(total=len(self.ready), unit='standards') as pbar:
+            for ref in self.ready:
+                self.conv[ref] = fourier_ratio_convolution(self.mapped[ref], LL, False, 
+                    ZLPkwargs=ZLPkwargs, padkwargs=padkwargs)
+
+        
