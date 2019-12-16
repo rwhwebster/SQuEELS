@@ -32,7 +32,7 @@ def generate_hann_window(dims, direction=0):
     window_swapped = np.swapaxes(window, 0, direction)
 
     for i in range(dims[direction]):
-        window_swapped[i] = np.cos(2*np.pi*i/dims[direction]) # This is only valid for 'right'
+        window_swapped[i] = np.cos(np.pi*i/dims[direction]) # This is only valid for 'right'
 
     window = np.swapaxes(window_swapped, 0, direction)
 
@@ -103,7 +103,7 @@ def zero_pad_spectrum(s, nLen, axis):
     return out
 
 
-def match_spectra_sizes(s1, s2, taper=True):
+def match_spectra_sizes(s1, s2, taper=True, size=100, buffer=10):
     '''
     Engineer two spectra to have the same dimensions on the energy-loss axis.
     Achieves this by using pad_spectrum() to resize spectra to a value that
@@ -115,6 +115,10 @@ def match_spectra_sizes(s1, s2, taper=True):
         One of the two spectra to be size matched.
     s2 : Hyperspy signal
         One of the two spectra to be size matched.
+    taper : Boolean
+        If true, adds signal so that the drop to zero is smoothly varying
+    size : int
+        The
 
     Returns
     -------
@@ -138,6 +142,16 @@ def match_spectra_sizes(s1, s2, taper=True):
 
     o1 = zero_pad_spectrum(s1, k, sigDim)
     o2 = zero_pad_spectrum(s2, k, sigDim)
+
+    if taper:
+        dims = list(s1.data.shape)
+        dims[-1] = size
+        dims = tuple(dims)
+        hann = generate_hann_window(dims, direction=sigDim)
+        hann1 = hann*np.mean(o1.data[...,l1-buffer:l1], axis=sigDim)[...,np.newaxis]
+        hann2 = hann*np.mean(o2.data[...,l2-buffer:l2], axis=sigDim)[...,np.newaxis]
+        o1.data[...,l1:l1+size] = hann1[...,:]
+        o2.data[...,l2:l2+size] = hann2[...,:]
 
     return o1, o2
 
