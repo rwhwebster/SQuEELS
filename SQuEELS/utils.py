@@ -76,7 +76,22 @@ def pad_spectrum(s, nLen):
 
 def zero_pad_spectrum(s, nLen, axis):
     '''
+    Pads the spectrum to match the length nLen given along axis and fills
+    the expanded region with zeros.
 
+    Parameters
+    ----------
+    s : hyperspy signal
+        The spectrum to be padded
+    nLen : int
+        final length of padded spectrum along specified axis
+    axis : int
+        the axis along which to extend the spectrum
+
+    Returns
+    -------
+    out : hyperspy signal
+        the padded spectrum/SI
     '''
     out = s.deepcopy()
     oLen = s.axes_manager[axis].size
