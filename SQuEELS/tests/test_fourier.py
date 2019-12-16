@@ -21,7 +21,7 @@ class TestFourier(unittest.TestCase):
         LL_data[:800] += sp.signal.gaussian(800, std=60)/20
         LL_signal = hs.signals.Signal1D(LL_data)
         LL_signal.axes_manager[0].offset = -200
-        output = sqf.fourier_ratio_convolution(HL_signal, LL_signal, deconv=False)
+        output = sqf.fourier_ratio_convolution(HL_signal, LL_signal, False)
 
     def test_FR_conv_2d(self):
         det = np.zeros((10,2048))
@@ -37,7 +37,7 @@ class TestFourier(unittest.TestCase):
         LL_data[:,:800] += sp.signal.gaussian(800, std=60)/20
         LL_signal = hs.signals.Signal1D(LL_data)
         LL_signal.axes_manager[1].offset = -200
-        output = sqf.fourier_ratio_convolution(HL_signal, LL_signal, deconv=False)
+        output = sqf.fourier_ratio_convolution(HL_signal, LL_signal, False)
 
     def test_FR_conv_3d(self):
         det = np.zeros((10,20,2048))
@@ -53,7 +53,7 @@ class TestFourier(unittest.TestCase):
         LL_data[...,:800] += sp.signal.gaussian(800, std=60)/20
         LL_signal = hs.signals.Signal1D(LL_data)
         LL_signal.axes_manager[2].offset = -200
-        output = sqf.fourier_ratio_convolution(HL_signal, LL_signal, deconv=False)
+        output = sqf.fourier_ratio_convolution(HL_signal, LL_signal, False)
 
     def test_FR_deconv_1d(self):
         det = np.zeros(2048)
@@ -69,7 +69,7 @@ class TestFourier(unittest.TestCase):
         LL_data[:800] += sp.signal.gaussian(800, std=60)/20
         LL_signal = hs.signals.Signal1D(LL_data)
         LL_signal.axes_manager[0].offset = -200
-        output = sqf.fourier_ratio_convolution(HL_signal, LL_signal, deconv=True)
+        output = sqf.fourier_ratio_convolution(HL_signal, LL_signal, True)
 
     def test_FR_deconv_2d(self):
         det = np.zeros((10,2048))
@@ -85,7 +85,7 @@ class TestFourier(unittest.TestCase):
         LL_data[:,:800] += sp.signal.gaussian(800, std=60)/20
         LL_signal = hs.signals.Signal1D(LL_data)
         LL_signal.axes_manager[1].offset = -200
-        output = sqf.fourier_ratio_convolution(HL_signal, LL_signal, deconv=True)
+        output = sqf.fourier_ratio_convolution(HL_signal, LL_signal, True)
 
     def test_FR_deconv_3d(self):
         det = np.zeros((10,20,2048))
@@ -101,7 +101,7 @@ class TestFourier(unittest.TestCase):
         LL_data[...,:800] += sp.signal.gaussian(800, std=60)/20
         LL_signal = hs.signals.Signal1D(LL_data)
         LL_signal.axes_manager[2].offset = -200
-        output = sqf.fourier_ratio_convolution(HL_signal, LL_signal, deconv=True)
+        output = sqf.fourier_ratio_convolution(HL_signal, LL_signal, True)
 
 if __name__ == '__main__':
     unittest.main()
