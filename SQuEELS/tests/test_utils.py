@@ -23,13 +23,28 @@ class TestUtils(unittest.TestCase):
         # Pass mock spectrum through pad_spectrum
         new_spectrum = squ.pad_spectrum(spectrum, 4096)
 
-    def test_match_spectra_sizes(self):
+    def test_match_spectra_sizes_1d(self):
         s1 = hs.signals.Signal1D(2000)
         s1.data[:] = 1.0
         s2 = hs.signals.Signal1D(1000)
         s2.data[:] = 1.0
         o1, o2 = squ.match_spectra_sizes(s1, s2)
+        assert np.allclose(o1.data.shape, o2.data.shape)
 
+    def test_match_spectra_sizes_2d(self):
+        s1 = hs.signals.Signal1D((10,2000))
+        s1.data[:] = 1.0
+        s2 = hs.signals.Signal1D((10,1000))
+        s2.data[:] = 1.0
+        o1, o2 = squ.match_spectra_sizes(s1, s2)
+        assert np.allclose(o1.data.shape, o2.data.shape)
+
+    def test_match_spectra_sizes_3d(self):
+        s1 = hs.signals.Signal1D((10,20,2000))
+        s1.data[:] = 1.0
+        s2 = hs.signals.Signal1D((10,20,1000))
+        s2.data[:] = 1.0
+        o1, o2 = squ.match_spectra_sizes(s1, s2)
         assert np.allclose(o1.data.shape, o2.data.shape)
 
 

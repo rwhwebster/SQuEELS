@@ -74,7 +74,21 @@ def pad_spectrum(s, nLen):
 
     return out
 
-def match_spectra_sizes(s1, s2):
+def zero_pad_spectrum(s, nLen, axis):
+    '''
+
+    '''
+    out = s.deepcopy()
+    oLen = s.axes_manager[axis].size
+    out.axes_manager[axis].size = nLen
+    dims = list(s.data.shape)
+    dims[axis] = nLen
+    out.data = np.zeros(dims)
+    out.data[...,:oLen] = s.data
+    return out
+
+
+def match_spectra_sizes(s1, s2, taper=True):
     '''
     Engineer two spectra to have the same dimensions on the energy-loss axis.
     Achieves this by using pad_spectrum() to resize spectra to a value that
@@ -82,30 +96,33 @@ def match_spectra_sizes(s1, s2):
 
     Parameters
     ----------
-    s1 : Hyperspy spectrum
+    s1 : Hyperspy signal
         One of the two spectra to be size matched.
-    s2 : Hyperspy spectrum
+    s2 : Hyperspy signal
         One of the two spectra to be size matched.
 
     Returns
     -------
-    o1 : Hyperspy spectrum
+    o1 : Hyperspy signal
         The size-matched version of input s1.
-    o2 : Hyperspy spectrum
+    o2 : Hyperspy signal
         The size-matched version of input s2.
     '''
-    l1 = len(s1.data)
-    l2 = len(s2.data)
+    sigDim = s1.axes_manager.signal_indices_in_array[0]
+    l1 = s1.axes_manager[sigDim].size
+    l2 = s2.axes_manager[sigDim].size
+    # l1 = len(s1.data)
+    # l2 = len(s2.data)
     # Determine the smallest 2^N that satisfies the sizes of both inputs
     # then add 1 to N to ensure reasonably sized padding region
     n1 = int(np.ceil(np.log2(l1)))
     n2 = int(np.ceil(np.log2(l2)))
-    N = max(n1,n2) + 4
+    N = max(n1,n2) + 1
 
     k = pow(2, N)
 
-    o1 = pad_spectrum(s1, k)
-    o2 = pad_spectrum(s2, k)
+    o1 = zero_pad_spectrum(s1, k, sigDim)
+    o2 = zero_pad_spectrum(s2, k, sigDim)
 
     return o1, o2
 
