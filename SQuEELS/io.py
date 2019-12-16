@@ -39,6 +39,7 @@ class Data:
         self.raw = hs.load(fp)
         self.data = self.raw
         self.info = "Raw data loaded. "
+        self.sigDim = self.data.axes_manager.signal_indices_in_array[0]
 
         if DEELS:
             if LL is None:
@@ -81,6 +82,16 @@ class Data:
             self.info +=  'Fourier ratio deconvolved. '
         else:
             print('No low-loss data available for deconvolution.')
+
+    def set_data_range(self, start, end):
+        '''
+
+        '''
+        try:
+            self.data.crop(start=start, end=end, axis=self.sigDim)
+            self.info += 'Data cropped to range '+str(start)+'-'+str(end)+' eV. '
+        except:
+            raise Exception('Something went wrong cropping core-loss data.')
 
     def plot(self):
         '''
@@ -277,5 +288,6 @@ class Standards:
             for ref in self.ready:
                 self.conv[ref] = fourier_ratio_convolution(self.mapped[ref], LL, False, 
                     ZLPkwargs=ZLPkwargs, padkwargs=padkwargs)
+                pbar.update(1)
 
-        
+
