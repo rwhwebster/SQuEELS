@@ -176,7 +176,6 @@ def generate_reflected_tail(s, centreChannel, threshold):
 
     '''
     out = s.deepcopy()
-
     # Seek left of peak for threshold
     amp = s.data[centreChannel]
     current = amp
@@ -194,6 +193,7 @@ def generate_reflected_tail(s, centreChannel, threshold):
     right = i
     # Extract tail and reflect, removing other data
     tail = s.data[:left]
+
     out.data[right:] = 0.0
     out.data[right:right+left] = tail[::-1]
 
@@ -225,25 +225,31 @@ def extract_ZLP(s, method='reflected tail', threshold=0.02, plot=False):
         spectrum identical to s, but data contains only the extracted zero-loss
         peak.
 
-    
-    TO DO: Further testing on ZLPs of different dispersions. Confirm SkewedVoigtModel
-    is a reasonable choice, but could benefit from further optimisation.
     '''
-
-    offset = s.axes_manager[0].offset
-    scale = s.axes_manager[0].scale
+    ZLP = s.deepcopy()
+    sigDim = s.axes_manager.signal_indices_in_array[0]
+    offset = s.axes_manager[sigDim].offset
+    scale = s.axes_manager[sigDim].scale
     zlpChannel = -offset/scale
-    if zlpChannel < 0 or zlpChannel > s.axes_manager[0].size:
+    if zlpChannel < 0 or zlpChannel > s.axes_manager[sigDim].size:
         raise Exception('Spectrum provided does not contain the 0eV channel.')
-    zlpChannel = np.argmax(s.data)
+    zlpChannels = np.argmax(s.data, axis=sigDim)
 
-    methods = { 'reflected tail' : generate_reflected_tail(s, zlpChannel, threshold),
-                'fit' : print("method needs updated.")
+    methods = { 'reflected tail' : generate_reflected_tail,
+                'fit' : 'print("method needs updated.")'
     }
 
-    ZLP = methods.get(method)
+    if len(s.data.shape) > 1:
+        for i in np.ndindex(s.data.shape[:sigDim]):
+            spectrum = s.inav[i[::-1]].deepcopy()
+            zlpChannel = zlpChannels[i]
+            ZLP.inav[i[::-1]] = methods[method](spectrum, zlpChannel, threshold)
+    else:
+        spectrum = s.deepcopy()
+        zlpChannel = zlpChannels
+        ZLP = methods[method](spectrum, zlpChannel, threshold)
 
-    if plot:
+    if plot and len(s.data.shape) == 1:
             plt.figure()
             plt.plot(s.data, label='data')
             plt.plot(ZLP.data, label=method+' model')
