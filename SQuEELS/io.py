@@ -68,6 +68,18 @@ class Data:
             copy=True, nan=0.0, posinf=0.0, neginf=0.0)
         self.info += "Intensities log-scaled. "
 
+    def deconvolve(self, ZLPkwargs=None, padkwargs=None):
+        '''
+
+        '''
+        if hasattr(self, 'LL'):
+            self.deconv = fourier_ratio_convolution(self.data, self.LL, 
+                deconv=True, ZLPkwargs=ZLPkwargs, padkwargs=padkwargs)
+            self.data = self.deconv
+            self.info +=  'Fourier ratio deconvolved. '
+        else:
+            print('No low-loss data available for deconvolution.')
+
     def plot(self):
         '''
         Call to hyperspy SI plotting routine to save keystrokes.
