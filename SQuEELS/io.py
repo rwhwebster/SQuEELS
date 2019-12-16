@@ -51,6 +51,7 @@ class Data:
                     title="Choose accompanying Low-Loss Data")
 
             self.LL = hs.load(LL)
+            self.LL_raw = self.LL.deepcopy()
 
     def normalise(self):
         '''
@@ -73,7 +74,16 @@ class Data:
 
     def deconvolve(self, ZLPkwargs=None, padkwargs=None):
         '''
+        This method provides a hook to the deconvolution mode of the
+        fourier_ratio_convolution function in SQuEELS.fourier_tools.
+        Has scope to pass keword arguments to lower level functions.
 
+        Parameters
+        ----------
+        ZLPkwargs : dict or None
+            kwargs to be passed to extract_ZLP
+        padkwargs : dict or None
+            kwargs to be passed to match_spectra_sizes
         '''
         if hasattr(self, 'LL'):
             self.deconv = fourier_ratio_convolution(self.data, self.LL, 
@@ -85,13 +95,51 @@ class Data:
 
     def set_data_range(self, start, end):
         '''
-
+            
         '''
         try:
             self.data.crop(start=start, end=end, axis=self.sigDim)
             self.info += 'Data cropped to range '+str(start)+'-'+str(end)+' eV. '
         except:
             raise Exception('Something went wrong cropping core-loss data.')
+
+    def project_signal_on_axis(self, axis):
+        '''
+        Sum signal along a given axis, reducing the dimensionality of the
+        dataset by 1.
+
+        Parameters
+        ----------
+        axis: int
+            The axis along which to sum spectra
+        '''
+        dims = list(self.data.axes_manager.shape)
+        dims[axis] = 1
+        self.data = self.data.rebin(new_shape=dims)
+        self.info += 'Signal projected along axis '+str(axis)+'. '
+
+        if hasattr(self, 'LL'):
+            dims_LL = list(self.LL.axes_manager.shape)
+            dims_LL[axis] = 1
+            self.LL = self.data.rebin(new_shape=dims_LL)
+
+    def rebin_energy(self, factor):
+        '''
+        Rebin signal along energy axis by given factor
+
+        Parameters
+        ----------
+        factor : int
+            Energy rebinning factor
+        '''
+        dims = list(self.data.axes_manager.shape)
+        dims[self.sigDim] /= factor
+        self.data = self.data.rebin(new_shape=dims)
+        self.info += 'Energy axis rebinned by factor of '+str(factor)+'. '
+        if hasattr(self, 'LL'):
+            dims_LL = list(self.LL.axes_manager.shape)
+            dims_LL[self.sigDim] /= factor
+            self.LL = self.data.rebin(new_shape=dims_LL)
 
     def plot(self):
         '''
@@ -289,5 +337,7 @@ class Standards:
                 self.conv[ref] = fourier_ratio_convolution(self.mapped[ref], LL, False, 
                     ZLPkwargs=ZLPkwargs, padkwargs=padkwargs)
                 pbar.update(1)
+
+        self.ready = self.conv
 
 
