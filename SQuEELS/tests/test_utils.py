@@ -1,6 +1,7 @@
 from __future__ import print_function
 import unittest
 import numpy as np
+import scipy as sp
 import hyperspy.api as hs
 
 import SQuEELS.utils as squ
@@ -98,6 +99,29 @@ class TestUtils(unittest.TestCase):
         o1, o2 = squ.match_spectra_sizes(s1, s2, taper=True, size=100)
         assert np.allclose(o1.data.shape, o2.data.shape)
 
+    def test_extract_ZLP_1d(self):
+        LL_data = np.zeros(2048)
+        LL_data[:400] = sp.signal.gaussian(400, std=2, sym=False)
+        LL_data[:800] += sp.signal.gaussian(800, std=60)/20
+        LL_signal = hs.signals.Signal1D(LL_data)
+        LL_signal.axes_manager[0].offset = -200
+        output = squ.extract_ZLP(LL_signal, method='reflected tail', threshold=0.03)
+
+    def test_extract_ZLP_2d(self):
+        LL_data = np.zeros((10,2048))
+        LL_data[:,:400] = sp.signal.gaussian(400, std=2, sym=False)
+        LL_data[:,:800] += sp.signal.gaussian(800, std=60)/20
+        LL_signal = hs.signals.Signal1D(LL_data)
+        LL_signal.axes_manager[1].offset = -200
+        output = squ.extract_ZLP(LL_signal, method='reflected tail', threshold=0.03)
+
+    def test_extract_ZLP_3d(self):
+        LL_data = np.zeros((10,20,2048))
+        LL_data[:,:,:400] = sp.signal.gaussian(400, std=2, sym=False)
+        LL_data[:,:,:800] += sp.signal.gaussian(800, std=60)/20
+        LL_signal = hs.signals.Signal1D(LL_data)
+        LL_signal.axes_manager[2].offset = -200
+        output = squ.extract_ZLP(LL_signal, method='reflected tail', threshold=0.03)
 
 if __name__ == '__main__':
     unittest.main()
