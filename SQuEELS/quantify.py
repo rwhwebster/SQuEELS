@@ -228,22 +228,24 @@ class MLLSmodel:
         -------
 
         '''
-        # df = pd.DataFrame(columns=['Y', 'X', *self.stds.ready.keys()])
 
         def model(t, coeffs):
             y = 0.0
             for i, comp in enumerate(comps):
                 y += coeffs[i] * self.stds.ready[comp].inav[coords].data
+            if fit_background:
+                y += coeffs[-2] * pow(t, coeffs[-1])
             return y
 
         def residuals(coeffs, yObs, t):
                 return yObs - model(t, coeffs)
 
         y_Obs = self.HL.data.inav[coords].data
-        t = np.linspace(self.HL.data.axes_manager[self.sigDim].offset,
-            self.HL.data.axes_manager[self.sigDim].size*self.HL.data.axes_manager[self.sigDim].scale+self.HL.data.axes_manager[self.sigDim].offset,
-            self.HL.data.axes_manager[self.sigDim].size)
+        disp = self.HL.data.axes_manager[self.sigDim].scale
+        offset = self.HL.data.axes_manager[self.sigDim].offset
+        nDat = self.HL.data.axes_manager[self.sigDim].size
+        t = np.linspace(offset, offset+(disp*nDat), nDat)
 
-        out = leastsq(residuals, init_guess, args=(y_Obs, t))
+        coefficients, flag = leastsq(residuals, init_guess, args=(y_Obs, t))
 
-        return out
+        return coefficients, t
