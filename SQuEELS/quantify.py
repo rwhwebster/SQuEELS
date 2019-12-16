@@ -2,6 +2,9 @@ from __future__ import print_function
 
 import numpy as np
 import scipy as sp
+from scipy.optimize import leastsq
+
+import pandas as pd
 
 from tqdm import tqdm
 
@@ -190,3 +193,57 @@ def solo_normal_solver(stds, comps, data, data_range, LL=None, plot=False):
     theta = _normalEqn(x_mat, y_obs)
 
     return theta
+
+
+class MLLSmodel:
+    '''
+    Class for handling standard MLLS fitting of spectra.
+    '''
+    def __init__(self, core_loss, standards):
+        '''
+        Parameters
+        ----------
+        core_loss : SQuEELS Data object
+            The core-loss data to be modelled.
+        standards : SQuEELS Standards object
+            The standards library containing the references to be used
+            as fit components
+        '''
+
+        self.stds = standards
+        self.HL = core_loss
+
+        self.dims = core_loss.data.data.shape
+        self.nDims = len(self.dims)
+        self.sigDim = core_loss.data.axes_manager.signal_indices_in_array[0]
+
+    def model_point(self, coords, comps, init_guess, fit_background=False):
+        '''
+        
+        Parameters
+        ----------
+
+
+        Returns
+        -------
+
+        '''
+        # df = pd.DataFrame(columns=['Y', 'X', *self.stds.ready.keys()])
+
+        def model(t, coeffs):
+            y = 0.0
+            for i, comp in enumerate(comps):
+                y += coeffs[i] * self.stds.ready[comp].inav[coords].data
+            return y
+
+        def residuals(coeffs, yObs, t):
+                return yObs - model(t, coeffs)
+
+        y_Obs = self.HL.data.inav[coords].data
+        t = np.linspace(self.HL.data.axes_manager[self.sigDim].offset,
+            self.HL.data.axes_manager[self.sigDim].size*self.HL.data.axes_manager[self.sigDim].scale+self.HL.data.axes_manager[self.sigDim].offset,
+            self.HL.data.axes_manager[self.sigDim].size)
+
+        out = leastsq(residuals, init_guess, args=(y_Obs, t))
+
+        return out
