@@ -217,24 +217,37 @@ class MLLSmodel:
         self.nDims = len(self.dims)
         self.sigDim = core_loss.data.axes_manager.signal_indices_in_array[0]
 
-    def model_point(self, coords, comps, init_guess, fit_background=False):
+    def model_point(self, coords, comps, init_guess, fit_background=None):
         '''
         
         Parameters
         ----------
+        coords : tuple of ints
+
+        comps : list of strings
+
+        init_guess : list of floats
+
+        fit_background : string or None
 
 
         Returns
         -------
+        coefficients : array of floats
 
         '''
+        def background(t, coeffs):
+            if fit_background=='power law':
+                return coeffs[-2] * pow(t, coeffs[-1])
+            if fit_background=='log-linear':
+                return np.log(coeffs[-2] * pow(t, coeffs[-1]))
 
         def model(t, coeffs):
             y = 0.0
             for i, comp in enumerate(comps):
                 y += coeffs[i] * self.stds.ready[comp].inav[coords].data
             if fit_background:
-                y += coeffs[-2] * pow(t, coeffs[-1])
+                y += background(t, coeffs)
             return y
 
         def residuals(coeffs, yObs, t):
@@ -248,4 +261,23 @@ class MLLSmodel:
 
         coefficients, flag = leastsq(residuals, init_guess, args=(y_Obs, t))
 
-        return coefficients, t
+        self.last = coefficients
+        return coefficients
+
+    def multimodel(self, comps, initial_guesses, background=None):
+        '''
+
+        '''
+        df = pd.DataFrame(columns=['coord',*comps])
+
+        for idx in np.ndindex(self.HL.data.axes_manager.shape[:-1]):
+            results = {'coord': idx, }
+
+            coeffs = self.model_point(idx, comps, initial_guesses, fit_background=background)
+            for i, comp in enumerate(comps):
+                results[comp] = coeffs[i]
+            if background:
+                results['bkgd_A'] = coeffs[-2]
+                results['bkgd_r'] = coeffs[-1]
+
+            df = df.append(results, ignore_index=True)
