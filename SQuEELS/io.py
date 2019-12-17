@@ -272,7 +272,7 @@ class Standards:
         '''
         self.mapped = dict()
 
-        dims = list(data.axes_manager.shape)
+        dims = list(data.data.shape)
         dims[-1] = self.nDat # Determined during set_spectrum_range
 
         for ref in self.ready:
@@ -378,4 +378,16 @@ class Standards:
 
         self.info += 'Mapped references projected onto axis '+str(axis)+'. '
 
+    def rebin_energy(self, factor):
+        '''
 
+        '''
+        self.rebinned = dict()
+
+        for comp in self.ready:
+            dims = list(self.ready[comp].axes_manager.shape)
+            dims[-1] /= factor
+            self.rebinned[comp] = self.ready[comp].rebin(new_shape=dims)
+
+        self.info += 'Reference spectra rebinned in energy by factor '+str(factor)+'. '
+        self.ready = self.rebinned
