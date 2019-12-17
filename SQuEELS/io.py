@@ -121,7 +121,7 @@ class Data:
         if hasattr(self, 'LL'):
             dims_LL = list(self.LL.axes_manager.shape)
             dims_LL[axis] = 1
-            self.LL = self.data.rebin(new_shape=dims_LL)
+            self.LL = self.LL.rebin(new_shape=dims_LL)
 
     def rebin_energy(self, factor):
         '''
@@ -139,7 +139,7 @@ class Data:
         if hasattr(self, 'LL'):
             dims_LL = list(self.LL.axes_manager.shape)
             dims_LL[self.sigDim] /= factor
-            self.LL = self.data.rebin(new_shape=dims_LL)
+            self.LL = self.LL.rebin(new_shape=dims_LL)
 
     def plot(self):
         '''
@@ -188,6 +188,7 @@ class Standards:
             else:
                 raise Exception('Unexpected file extension encountered. Expecting .dm3 files.')
 
+        self.info = 'Reference spectra loaded. '
         # Does init need to do anything else?
 
     def set_active_standards(self, names):
@@ -204,6 +205,7 @@ class Standards:
         for name in names:
             if name in keys:
                 self.active[name] = True
+        self.info += 'References for '+str(names)+' set to active. '
 
     def set_spectrum_range(self, start, end):
         '''
@@ -262,6 +264,29 @@ class Standards:
                 self.lims = (start, end)
                 self.nDat = spec.axes_manager[0].size
 
+        self.info += 'Reference energy range set to '+str(start)+'-'+str(end)+' eV. '
+
+    def map_refs_to_nav(self, data):
+        '''
+
+        '''
+        self.mapped = dict()
+
+        dims = list(data.axes_manager.shape)
+        dims[-1] = self.nDat # Determined during set_spectrum_range
+
+        for ref in self.ready:
+            mapped = data.deepcopy()
+            mapped.data = np.zeros(dims)
+            mapped.axes_manager[-1].offset = self.lims[0]
+            mapped.axes_manager[-1].size = self.nDat
+            mapped.data[...,:] = self.ready[ref].data
+            self.mapped[ref] = mapped
+
+        self.ready = self.mapped
+
+        self.info += 'Spectra mapped onto data navigation dimensions. '
+
     def normalise(self, logscale=False):
         '''
         Scales the integrated intensity of range-set references to 1.
@@ -291,6 +316,7 @@ class Standards:
                 self.normed[ref] = spec
                 self.norm_coeffs[ref] = scale_factor
                 self.ready[ref] = spec
+            self.info += 'Reference spectra normalised with logscale set to '+str(logscale)+'. '
         else:
             raise Exception("Cropped reference spectra not found.")
 
@@ -301,7 +327,7 @@ class Standards:
         for item in self.active:
             self.active[item] = False
 
-    def convolve_ready(self, LL, ZLPkwargs=None, padkwargs=None):
+    def convolve_mapped(self, LL, ZLPkwargs=None, padkwargs=None):
         '''
         Convolve the prepared reference spectra with a low loss spectrum.
         If using a spectrum image, this generates a map of the same spatial
@@ -319,18 +345,7 @@ class Standards:
         '''
 
         self.conv = dict()
-        self.mapped = dict()
-        # Get dimensions of LL signal
-        dims = list(LL.data.shape)
-        dims[-1] = self.nDat # Determined during set_spectrum_range
-
-        for ref in self.ready:
-            mapped = LL.deepcopy()
-            mapped.data = np.zeros(dims)
-            mapped.axes_manager[-1].offset = self.lims[0]
-            mapped.axes_manager[-1].size = self.nDat
-            mapped.data[...,:] = self.ready[ref].data
-            self.mapped[ref] = mapped
+        # Get dimensions of signal
 
         with tqdm(total=len(self.ready), unit='standards') as pbar:
             for ref in self.ready:
@@ -339,5 +354,28 @@ class Standards:
                 pbar.update(1)
 
         self.ready = self.conv
+        self.info += 'Mapped references convolved with data low-loss. '
+
+    def project_map_on_axis(self, axis):
+        '''
+        Sum signal along a given axis, reducing the dimensionality of the
+        dataset by 1.
+
+        Parameters
+        ----------
+        axis: int
+            The axis along which to sum spectra
+        '''
+        self.projected = dict()
+
+        for comp in self.ready:
+
+            dims = list(self.ready[comp].axes_manager.shape)
+            dims[axis] = 1
+            self.projected[comp] = self.ready[comp].rebin(new_shape=dims)
+
+        self.ready = self.projected
+
+        self.info += 'Mapped references projected onto axis '+str(axis)+'. '
 
 
