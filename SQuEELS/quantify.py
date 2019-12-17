@@ -241,6 +241,8 @@ class MLLSmodel:
                 return coeffs[-2] * pow(t, coeffs[-1])
             if fit_background=='log-linear':
                 return np.log(coeffs[-2] * pow(t, coeffs[-1]))
+            if fit_background=='double power law':
+                return coeffs[-4] * pow(t, coeffs[-3]) + coeffs[-2] * pow(t, coeffs[-1])
 
         def model(t, coeffs):
             y = 0.0
@@ -264,20 +266,60 @@ class MLLSmodel:
         self.last = coefficients
         return coefficients
 
-    def multimodel(self, comps, initial_guesses, background=None):
+    def multimodel(self, comps, initial_guesses, background=None, update_guesses=True):
         '''
 
         '''
+        self.comps = comps
         df = pd.DataFrame(columns=['coord',*comps])
 
-        for idx in np.ndindex(self.HL.data.axes_manager.shape[:-1]):
-            results = {'coord': idx, }
+        points = np.prod(self.HL.data.axes_manager.shape[:-1])
 
-            coeffs = self.model_point(idx, comps, initial_guesses, fit_background=background)
-            for i, comp in enumerate(comps):
-                results[comp] = coeffs[i]
-            if background:
-                results['bkgd_A'] = coeffs[-2]
-                results['bkgd_r'] = coeffs[-1]
+        with tqdm(desc='Quantifying SI', total=points, unit='spectra') as pbar:
+            for idx in np.ndindex(self.HL.data.axes_manager.shape[:-1]):
+                results = {'coord': idx, }
 
-            df = df.append(results, ignore_index=True)
+                coeffs = self.model_point(idx, comps, initial_guesses, fit_background=background)
+                for i, comp in enumerate(comps):
+                    results[comp] = coeffs[i]
+                if background:
+                    results['bkgd_A'] = coeffs[-2]
+                    results['bkgd_r'] = coeffs[-1]
+                if update_guesses:
+                    initial_guesses = coeffs
+
+                df = df.append(results, ignore_index=True)
+                pbar.update(1)
+
+        self.multimodel_results = df
+        return df
+
+    def generate_element_maps(self):
+        '''
+        Using dataframe containing multimodel results, extract elemental
+        quantities into ndarrays for ease of inspection.
+        '''
+        self.qmaps = dict()
+
+        canvas = np.zeros(self.dims[:-1])
+
+        for comp in self.comps:
+            qmap = canvas.copy()
+            for i in range(len(self.multimodel_results)):
+                qmap[self.multimodel_results['coord'][i][::-1]] = self.multimodel_results[comp][i]
+            self.qmaps[comp] = qmap
+
+    def generate_percentage_maps(self):
+        '''
+        Generate composition percentages based on elemental maps created using
+        generate_element_maps method.
+        '''
+        self.pmaps = dict()
+
+        total = np.zeros(self.dims[:-1])
+
+        for comp in self.comps:
+            total += self.qmaps[comp]
+
+        for comp in self.comps:
+            self.pmaps[comp] = 100* self.qmaps[comp]/total
