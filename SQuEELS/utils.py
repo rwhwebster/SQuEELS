@@ -155,16 +155,18 @@ def match_spectra_sizes(s1, s2, taper=True, size=100, buffer=10):
 
     return o1, o2
 
-def generate_reflected_tail(s, centreChannel, threshold):
+def generate_reflected_tail(s, centreChannels, threshold):
     '''
-    Takes the input spectrum, s, and returns only the largest peak, replacing
-    other data present using the reflected tail method.
+    Takes the input spectrum/ spectrum image, s, and returns only the largest 
+    peak, replacing other data present using the reflected tail method.
 
     Parameters
     ----------
     s : hyperspy spectrum
 
-    centreChannel : int
+    centreChannels : int
+        A map containing the index of the channel of maximum intensity in each
+        spectrum in the dataset
 
     threshold : float
         Fraction of max peak intensity which is used to define where tails
@@ -177,30 +179,38 @@ def generate_reflected_tail(s, centreChannel, threshold):
     '''
     out = s.deepcopy()
     # Seek left of peak for threshold
-    amp = s.data[centreChannel]
-    current = amp
-    i = centreChannel
-    while (current/amp) > threshold:
-        i -= 1
-        current = s.data[i]
-    left = i
+    maxVals = s.data.take(centreChannels)
+    currents = maxVals
+    i = centreChannels.astype(np.int)
+    
+    truths = centreChannels.copy()
+    truths[:] = True
+    while np.any(truths):
+        i[truths==True] -= 1
+        currents = s.data.take(i)
+        truths[currents/maxVals < threshold] = False
+    left = i.copy()
     # now seek right
-    current = amp
-    i = centreChannel
-    while (current/amp) > threshold:
-        i += 1
-        current = s.data[i]
-    right = i
+    currents = maxVals
+    i = centreChannels.astype(np.int)
+    truths[:] = True
+    while np.any(truths):
+        i[truths==True] += 1
+        currents = s.data.take(i)
+        truths[currents/maxVals < threshold] = False
+    right = i.copy()
     # Extract tail and reflect, removing other data
-    tail = s.data[:left]
+    # This needs optimised, but difficult to know how
+    for idx in np.ndindex(s.data.shape[:-1]):
+        tail = s.data[idx][:left[idx]]
 
-    out.data[right:] = 0.0
-    out.data[right:right+left] = tail[::-1]
+        out.data[idx][right[idx]:] = 0.0
+        out.data[idx][right[idx]:right[idx]+left[idx]] = tail[::-1]
 
     return out
 
 
-def extract_ZLP(s, method='reflected tail', threshold=0.02, plot=False):
+def extract_ZLP(s, method='reflected tail', threshold=0.05, plot=False):
     '''
     Examines spectrum s for zero-loss peak and returns a dataset of the same
     dimensions, but which only contains the ZLP.
@@ -225,6 +235,11 @@ def extract_ZLP(s, method='reflected tail', threshold=0.02, plot=False):
         spectrum identical to s, but data contains only the extracted zero-loss
         peak.
 
+    TODO:
+    -----
+    1)  Suspect code will not work if given a single spectrum.
+        Need to generalise this.
+
     '''
     ZLP = s.deepcopy()
     sigDim = s.axes_manager.signal_indices_in_array[0]
@@ -235,19 +250,14 @@ def extract_ZLP(s, method='reflected tail', threshold=0.02, plot=False):
         raise Exception('Spectrum provided does not contain the 0eV channel.')
     zlpChannels = np.argmax(s.data, axis=sigDim)
 
+    # if zlpChannels is not np.ndarray:
+    #     zlpChannels = np.array([zlpChannels])
+
     methods = { 'reflected tail' : generate_reflected_tail,
                 'fit' : 'print("method needs updated.")'
     }
 
-    if len(s.data.shape) > 1:
-        for i in np.ndindex(s.data.shape[:sigDim]):
-            spectrum = s.inav[i[::-1]].deepcopy()
-            zlpChannel = zlpChannels[i]
-            ZLP.inav[i[::-1]] = methods[method](spectrum, zlpChannel, threshold)
-    else:
-        spectrum = s.deepcopy()
-        zlpChannel = zlpChannels
-        ZLP = methods[method](spectrum, zlpChannel, threshold)
+    ZLP = methods[method](s, zlpChannels, threshold)
 
     if plot and len(s.data.shape) == 1:
             plt.figure()
