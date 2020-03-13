@@ -250,8 +250,8 @@ def extract_ZLP(s, method='reflected tail', threshold=0.05, plot=False):
         raise Exception('Spectrum provided does not contain the 0eV channel.')
     zlpChannels = np.argmax(s.data, axis=sigDim)
 
-    # if zlpChannels is not np.ndarray:
-    #     zlpChannels = np.array([zlpChannels])
+    if type(zlpChannels) is not np.ndarray:
+        zlpChannels = np.array([zlpChannels])
 
     methods = { 'reflected tail' : generate_reflected_tail,
                 'fit' : 'print("method needs updated.")'
