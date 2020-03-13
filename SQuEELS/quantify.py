@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import numpy as np
 import scipy as sp
-from scipy.optimize import leastsq
+from scipy.optimize import least_squares as lsq
 
 import pandas as pd
 
@@ -143,7 +143,7 @@ class MLLSmodel:
             return y
 
         def residuals(coeffs, yObs, t):
-                return yObs - model(t, coeffs)
+                return model(t, coeffs) - yObs
 
         y_Obs = self.HL.data.inav[coords].data
         disp = self.HL.data.axes_manager[self.sigDim].scale
@@ -151,7 +151,7 @@ class MLLSmodel:
         nDat = self.HL.data.axes_manager[self.sigDim].size
         t = np.linspace(offset, offset+(disp*nDat), nDat)
 
-        coefficients, flag = leastsq(residuals, init_guess, args=(y_Obs, t))
+        coefficients = lsq(residuals, init_guess, args=(y_Obs, t))
 
         self.last = coefficients
         return coefficients
