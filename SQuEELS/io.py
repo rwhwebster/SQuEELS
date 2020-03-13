@@ -147,6 +147,7 @@ class Data:
         '''
         self.data.plot()
 
+
 class Standards:
     def __init__(self, fp=None):
         '''
