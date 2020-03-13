@@ -146,10 +146,7 @@ class MLLSmodel:
                 return model(t, coeffs) - yObs
 
         y_Obs = self.HL.data.inav[coords].data
-        disp = self.HL.data.axes_manager[self.sigDim].scale
-        offset = self.HL.data.axes_manager[self.sigDim].offset
-        nDat = self.HL.data.axes_manager[self.sigDim].size
-        t = np.linspace(offset, offset+(disp*nDat), nDat)
+        t = self.HL.data.axes_manager[self.sigDim].axis
 
         coefficients = lsq(residuals, init_guess, args=(y_Obs, t))
 
