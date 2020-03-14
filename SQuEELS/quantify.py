@@ -1,8 +1,11 @@
 from __future__ import print_function
 
+from functools import partial
+import multiprocessing as mp
+
 import numpy as np
 import scipy as sp
-from scipy.optimize import least_squares as lsq
+from scipy.optimize import curve_fit as lsq
 
 import pandas as pd
 
@@ -107,7 +110,7 @@ class MLLSmodel:
         self.nDims = len(self.dims)
         self.sigDim = core_loss.data.axes_manager.signal_indices_in_array[0]
 
-    def model_point(self, coords, comps, init_guess, fit_background=None):
+    def model_point(self, coords, comps, init_guess, fit_background=None, lsqKwargs=None):
         '''
         
         Parameters
@@ -126,6 +129,9 @@ class MLLSmodel:
         coefficients : array of floats
 
         '''
+        if lsqKwargs is None:
+            lsqKwargs = {}
+
         def background(t, coeffs):
             if fit_background=='power law':
                 return coeffs[-2] * pow(t, coeffs[-1])
@@ -134,7 +140,7 @@ class MLLSmodel:
             if fit_background=='double power law':
                 return coeffs[-4] * pow(t, coeffs[-3]) + coeffs[-2] * pow(t, coeffs[-1])
 
-        def model(t, coeffs):
+        def model(t, *coeffs):
             y = 0.0
             for i, comp in enumerate(comps):
                 y += coeffs[i] * self.stds.ready[comp].inav[coords].data
@@ -142,20 +148,18 @@ class MLLSmodel:
                 y += background(t, coeffs)
             return y
 
-        def residuals(coeffs, yObs, t):
-                return model(t, coeffs) - yObs
-
         y_Obs = self.HL.data.inav[coords].data
         t = self.HL.data.axes_manager[self.sigDim].axis
 
-        coefficients = lsq(residuals, init_guess, args=(y_Obs, t))
+        opt_cofs, cov = lsq(model, t, y_Obs, p0=init_guess, **lsqKwargs)
 
-        self.last = coefficients
-        return coefficients
+        self.last = opt_cofs
+        return opt_cofs
 
-    def multimodel(self, comps, initial_guesses, background=None, update_guesses=True):
+    def multimodel(self, comps, initial_guesses, background=None, update_guesses=True, lsqKwargs=None):
         '''
-
+        This function is a wraparound for MLLSmodel.model_point which is used
+        to process all spectra in a spectrum image.
         '''
         self.comps = comps
         df = pd.DataFrame(columns=['coord',*comps])
@@ -166,7 +170,8 @@ class MLLSmodel:
             for idx in np.ndindex(self.HL.data.axes_manager.shape[:-1]):
                 results = {'coord': idx, }
 
-                coeffs = self.model_point(idx, comps, initial_guesses, fit_background=background)
+                coeffs = self.model_point(idx, comps, initial_guesses, fit_background=background, lsqKwargs=lsqKwargs)
+
                 for i, comp in enumerate(comps):
                     results[comp] = coeffs[i]
                 if background:
