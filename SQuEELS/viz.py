@@ -15,6 +15,18 @@ from distutils.version import LooseVersion
 if LooseVersion(_mplv) >= LooseVersion('2.2.0'):
     _mpl_non_adjust = True
 
+def _power_law(x, coeffs):
+    '''
+    Provides a power law background shape for the FitInspector class.
+
+    Parameters
+    ----------
+    '''
+    background = np.empty(coeffs.shape[1:]+(len(x),))
+    background[...,:] = x[np.newaxis, np.newaxis, :]
+    background = coeffs[-2,...,np.newaxis] * pow(background, coeffs[-1,...,np.newaxis])
+    return background
+
 
 class FitInspector:
     def __init__(self, data, fit_components, refs, coeffs, 
@@ -22,8 +34,8 @@ class FitInspector:
         '''
         Navigate results of model fitting of spectrum image.
 
-        Very heavily inspired by the DataBrowser class in fpd.
-        Credit to GWP.
+        Very heavily inspired by the DataBrowser class in fpd 
+        (https://gitlab.com/fpdpy/fpd).  Credit to GWP.
 
         Note that any operations such as data-ranging and convolution
         are assumed to have already been performed on the inputs.
@@ -46,16 +58,29 @@ class FitInspector:
 
         self.data = data.data
         self.e_ax = data.axes_manager[-1].axis
+        self.ndat = len(self.e_ax)
 
         self.scanY, self.scanX = self.data.shape[:-1]
 
         # Prepare fit data
         self.coeffs = coeffs
         self.comp_names = fit_components
-        self.comps = np.empty(len(self.comp_names), dtype=object)
+        self.n_comps = len(self.comp_names)
+        self.comps = np.empty(self.n_comps, dtype=object)
         for i, comp in enumerate(self.comp_names):
             self.comps[i] = refs[comp].data
-            self.comps[i][...,:] *= self.coeffs[i,...,np.newaxis]
+            self.comps[i] = (self.comps[i].T * self.coeffs[i].T).T
+
+        self.bkgd = np.zeros(self.data.shape)
+        if bkgd_model is not None:
+            self.bkgd = bkgd_model(self.e_ax, self.coeffs)
+
+        # combine fit data into single array
+        self.fit_data = np.empty((self.scanY, self.scanX, self.n_comps+2, self.ndat))
+        self.fit_data[...,0,:] = self.data
+        self.fit_data[...,1,:] = self.bkgd
+        for i in range(self.n_comps):
+            self.fit_data[...,2+i,:] = self.comps[i]
 
         # Prepare navigation image
         self.nav_im = nav_im
@@ -67,7 +92,7 @@ class FitInspector:
         self.scanYind_old = self.scanYind
         self.scanXind_old = self.scanXind
 
-        self.plot_data = self.data[self.scanYind, self.scanXind, :]
+        self.plot_data = self.fit_data[self.scanYind, self.scanXind, ...]
 
         self.rwh = max(self.scanY, self.scanX)//64
         if self.rwh == 0:
@@ -103,7 +128,9 @@ class FitInspector:
         self.f_spec, ax = plt.subplots()
         self.f_spec.canvas.set_window_title('spectrum')
 
-        self.im = ax.plot(self.e_ax, self.plot_data)
+        self.im = ax.plot(self.e_ax, self.plot_data[0])
+        for i in range(self.plot_data.shape[0]-1):
+            self.im += ax.plot(self.e_ax, np.sum(self.plot_data[1:2+i], axis=0))
 
         plt.sca(ax)
         ax.format_coord = self.format_coord
@@ -207,11 +234,15 @@ class FitInspector:
         return 'x=%d, y=%d'%(x, y)
 
     def update_spec_plot(self):
-        self.plot_data = self.data[self.scanYind, self.scanXind, :]
+        self.plot_data = self.fit_data[self.scanYind, self.scanXind, ...]
 
-        self.im[0].set_ydata(self.plot_data)
-        self.im[0].axes.set_ylim((self.plot_data.min(), self.plot_data.max()))
-        self.im[0].axes.figure.canvas.draw()
+        for i in range(self.plot_data.shape[0]):
+            if i==0:
+                self.im[i].set_ydata(self.plot_data[i])
+                self.im[0].axes.set_ylim((self.plot_data[:2].min(), self.plot_data[:2].max()))
+            else:
+                self.im[i].set_ydata(np.sum(self.plot_data[1:1+i], axis=0))
+            self.im[i].axes.figure.canvas.draw()
 
 
     def disconnect(self):
