@@ -355,8 +355,8 @@ class MLLSmodel:
         Row 1: x-values corresponsing to y-values
         Row 2+: The reference spectra to be fitted to the observed data.
 
-        Params
-        ------
+        Parameters
+        ----------
         idx : tuple
             The indices of the spectrum within the SI to be extracted into
             the numpy array
@@ -387,8 +387,8 @@ class MLLSmodel:
         Function that performs curve fitting based on use of
         scipy.optimize.curve_fit
 
-        Params
-        ------
+        Parameters
+        ----------
         data : ndarray
             The data to be used in the model.  Prepared by the function
             MLLSmodel._prepare_model_data()
@@ -442,8 +442,8 @@ class MLLSmodel:
         specified in fit_components. 
         May include a background by specifying bkgd_shape.
 
-        Params
-        ------
+        Parameters
+        ----------
         index : tuple
             A 2-tuple of ints specifying the inav coordinates of the spectrum
             to be modelled.
@@ -476,8 +476,8 @@ class MLLSmodel:
         '''
         Model all spectra in the SI and return results.
 
-        Params
-        ------
+        Parameters
+        ----------
         fit_components : list of strings
             A list of the names of reference spectra to be used as components
             in the model.
@@ -522,8 +522,8 @@ class MLLSmodel:
         '''
         Model all spectra in the SI and return results.
 
-        Params
-        ------
+        Parameters
+        ----------
         fit_components : list of strings
             A list of the names of reference spectra to be used as components
             in the model.
@@ -592,8 +592,8 @@ class MLLSmodel:
         '''
         Model all spectra in the SI and return results.
 
-        Params
-        ------
+        Parameters
+        ----------
         fit_components : list of strings
             A list of the names of reference spectra to be used as components
             in the model.
