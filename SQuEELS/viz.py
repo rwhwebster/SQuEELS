@@ -21,6 +21,17 @@ def _power_law(x, coeffs):
 
     Parameters
     ----------
+    x : ndarray
+        The x values to be used to calculate corresponding y values
+    coeffs : ndarray
+        The array of coefficients for all the components of a SQuEELS MLLS
+        fit.  Assumes the last two components are for the power law background.
+
+    Returns
+    -------
+    background : ndarray
+        Array with the spatial dimensions of the coeffs map and the z dimension
+        length of the x values.  Contains the calculated power law shape.
     '''
     background = np.empty(coeffs.shape[1:]+(len(x),))
     background[...,:] = x[np.newaxis, np.newaxis, :]
@@ -112,7 +123,7 @@ class FitInspector:
         d = {'cmap':'gray'}
 
         im = ax.imshow(self.nav_im, interpolation='nearest', **d)
-        plt.colorbar(mappable=im)
+        # plt.colorbar(mappable=im)
 
         rect_c = 'r'
         self.rect = mpl.patches.Rectangle((self.scanYind - self.rwh/2,
@@ -135,6 +146,10 @@ class FitInspector:
         plt.sca(ax)
         ax.format_coord = self.format_coord
         self.update_spec_plot()
+
+        self.leg_list = ['Observed Data', 'Background'] + self.comp_names
+
+        ax.legend(self.im, self.leg_list, loc='upper right')
 
         plt.tight_layout()
         plt.draw()
