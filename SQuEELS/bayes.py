@@ -14,7 +14,7 @@ import pymc3 as pm
 import matplotlib.pyplot as plt
 plt.ion()
 
-class BayesModel:
+class BayesModel_old:
     '''
     Class for handling Bayesian analysis of elemental composition.
     '''
@@ -255,3 +255,115 @@ class BayesModel:
 
 
 # END OF CLASS
+
+
+class BayesModel:
+    '''
+
+    '''
+    def __init__(self, core_loss, standards):
+        '''
+
+        '''
+        self.stds = standards
+        self.HL = core_loss
+
+        self.dims = core_loss.data.data.shape
+        self.nDims = len(self.dims)
+        self.sigDim = core_loss.data.axes_manager.signal_indices_in_array[0]
+
+    def model_at_index(self, coords, prior_means=None, bkgd_model='power law', width=100.0, nSamples=None,  init_params={}, nDraws=1000, chain_params={}):
+        '''
+        Get Bayesian statistics for multiple spectra in the spectrum image.
+        Provides no scope for forward convolution of references.
+
+        Parameters
+        ----------
+        nSamples : None, int or ndarray
+            Leave as None, or specify a number of random samples to draw
+            from the SI.
+        prior_means : None or tuple of floats
+            Initial guesses for each of the components to be fed to the model
+        init_params : dict
+            Dictionary of arguments and kwargs taken by init_model.
+        nDraws : int
+            The number of monte carlo iterations each chain should run.
+            The number of chains can be specified in chain_params.
+        chain_params : dict
+            Dictionary of arguments and kwargs taken by start_chains.
+
+        Returns
+        -------
+        df : pandas dataframe
+            Dataframe containing the output of the monte carlo chains.
+        '''
+        if prior_means is None:
+            mu_0 = (1.0,)*len(self.comps)
+        else:
+            mu_0 = prior_means
+        # First, establish list of array coordinates to operate over
+        #yx = self._map_yx(nSamples)
+        #nSamples = len(yx) # Number of different samples in dataset
+        yx = coords
+        # Second, set up dataframe to hold model results for each spectrum
+        #df = pd.DataFrame(columns=['Y','X','Trace',*self.comps])
+
+        # Third, prepare observed data and references as theano.shared instances
+        # Observable data
+        data = theano.shared(self.HL.data.inav[*yx].data) # Use first point in coordinate list 'yx'
+        # Reference spectra
+        self.stds.model = dict()
+        for ref in self.comps:
+            self.stds.model[ref] = theano.shared(self.stds.ready[ref].inav[*yx].data)
+
+        x = self.HL.data.axes_manager[-1].axis
+
+        # Fourth, create the bare-bones of a pymc3 model
+        with pm.Model() as model:
+            beta = []
+            for i, comp in enumerate(self.comps):
+                beta.append(pm.Normal(comp, mu=mu_0[i], sigma=width))
+            sigma = pm.HalfCauchy('sigma', beta=10, testval=width)
+
+            mu = None
+
+            for i, comp in enumerate(self.comps):
+                if mu is None:
+                    mu = beta[i]*self.stds.model[comp]
+                else:
+                    mu += beta[i]*self.stds.model[comp]
+            if bkgd_model=='power law':
+                mu += beta[-2]*x
+
+            pm.Normal('Y_obs', mu=mu, sigma=sigma, observed=data)
+        # End of model declaration
+
+        # Final stage is to run loop over spectra to calculate traces        
+        for i in trange(nSamples, desc='Sampling spectra from SI', unit='spectra'):
+            y = yx[i,1]
+            x = yx[i,0]
+            # Update shared data to current spectrum
+            data.set_value(self.HL.data.inav[y,x].data)
+            # Prepare results dict
+            results = {'Y':y, 'X':x}
+            try:
+                with model:
+                    results['Trace'] = pm.sample(nDraws, **chain_params)
+                smry = pm.summary(results['Trace'])
+                for comp in self.comps:
+                   results[comp] = np.mean(results['Trace'].get_values(comp))
+                   results[comp+' sd'] = smry['sd'][comp]
+                   results[comp+' hpd_97.5'] = smry['hpd_97.5'][comp]
+                   results[comp+' hpd_2.5'] = smry['hpd_2.5'][comp]
+            except:
+                print('Model at index '+str(i)+' has failed.')
+                results['Trace'] = np.nan
+                for comp in self.comps:
+                   results[comp] = np.nan
+                   results[comp+' sd'] = np.nan
+                   results[comp+' hpd_97.5'] = np.nan
+                   results[comp+' hpd_2.5'] = np.nan
+            # Append current results to dataframe
+            df = df.append(results, ignore_index=True)
+
+        return df
