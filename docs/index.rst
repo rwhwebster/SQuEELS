@@ -1,4 +1,4 @@
-SQuEELS v0.1.4
+SQuEELS v0.1.6
 ====
 
 SQuEELS (**S**\tandard-based **Qu**\antification of **EELS** data) is a package for in-depth analysis of elemental quantification of EELS core-loss spectra.
@@ -11,6 +11,10 @@ The SQuEELS package is designed to provide code for straightforward implementati
 
    install
    standards
+   data
+   mlls
+   viz
    bayes
    refs
+   SQuEELS
 

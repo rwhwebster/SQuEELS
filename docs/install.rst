@@ -12,6 +12,7 @@ The package is has been written using Python 3.6.8, though all elements should r
 * hyperspy (tested using version 1.5.1, but others should work)
 * lmfit
 * pymc3
+* theano
 * tqdm
 
 Currently, SQuEELS is only available for installation from its GitLab repository.  There are no current plans to change this.

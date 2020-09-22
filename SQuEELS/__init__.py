@@ -1,6 +1,6 @@
 import sys
 
-__version__ = '0.1.4'
+__version__ = '0.1.6'
 
 
 # python version
@@ -10,11 +10,13 @@ if sys.version_info > (3, 0):
 del(sys)
 
 __all__ = [
+    'utils',
     'fourier_tools',
-    'quantify',
     'processing',
     'io',
-    'bayes']
+    'quantify',
+    'bayes',
+    'viz']
 
 for x in __all__:
     exec('from . import %s' %(x))
