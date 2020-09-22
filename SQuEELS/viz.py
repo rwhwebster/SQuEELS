@@ -139,7 +139,7 @@ class FitInspector:
         self.f_spec, ax = plt.subplots()
         self.f_spec.canvas.set_window_title('spectrum')
 
-        self.im = ax.plot(self.e_ax, self.plot_data[0], zorder=1)
+        self.im = ax.plot(self.e_ax, self.plot_data[0], color='k', zorder=1)
         for i in range(self.plot_data.shape[0]-1):
             self.im += ax.plot(self.e_ax, np.sum(self.plot_data[1:2+i], axis=0), zorder=self.plot_data.shape[0]-i)
 
