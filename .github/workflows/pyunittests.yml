@@ -14,5 +14,12 @@ jobs:
         python-version: 3.6
     - name: Install dependencies
       run: |
+        apt-get install -y xvfb
         python -m pip install --upgrade pip
-        pip install numpy scipy matplotlib hyperspy pymc3 lmfit arviz tqdm
+        pip install numpy scipy matplotlib hyperspy==1.5.1 pymc3 lmfit arviz tqdm unittest
+    - name: Install SQuEELS package
+      run : |
+        pip install --user .
+    - name: Run unit tests
+      run: |
+        xvfb-run python3 -m unittest discover -p test*.py ./
