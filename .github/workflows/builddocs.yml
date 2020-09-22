@@ -1,0 +1,38 @@
+name: Deploy Documentation
+
+on: 
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy_docs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@master
+    - name: Set up Python 3.7
+      uses: actions/setup-python@master
+      with:
+        python-version: 3.7
+    - name: Install dependencies
+      run: |
+        sudo apt-get install -y python3-dev python3-pip python3-numpy python3-scipy python3-matplotlib xvfb python3-setuptools python3-psutil
+        sudo apt-get install -qy python3-sphinx python3-sphinx-rtd-theme build-essential
+        python -m pip install --upgrade pip
+        pip install numpy scipy matplotlib hyperspy pymc3 lmfit arviz tqdm
+    - name: Install SQuEELS
+      run: |
+        pip install --user .
+    - name: Build API Documentation
+      run: |
+        sphinx-apidoc -fT -o ./pages ./SQuEELS/ ./SQuEELS/tests
+    - name: Build HTML
+      run: |
+        cd pages/
+        make html
+        cd ..
+        mv pages/_build/html public
+      artifacts:
+        paths:
+          - public
