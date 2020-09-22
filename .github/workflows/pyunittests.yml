@@ -16,7 +16,7 @@ jobs:
       run: |
         sudo apt-get install -y xvfb
         python -m pip install --upgrade pip
-        pip install numpy scipy matplotlib hyperspy==1.5.1 pymc3 lmfit arviz tqdm unittest
+        pip install numpy scipy matplotlib hyperspy==1.5.1 pymc3 lmfit arviz tqdm
     - name: Install SQuEELS package
       run : |
         pip install --user .
