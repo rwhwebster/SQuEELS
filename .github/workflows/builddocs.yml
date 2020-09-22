@@ -32,7 +32,4 @@ jobs:
         cd pages/
         make html
         cd ..
-        mv pages/_build/html public
-      artifacts:
-        paths:
-          - public
+        mv pages/_build/html docs
