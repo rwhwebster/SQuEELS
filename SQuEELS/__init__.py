@@ -15,7 +15,6 @@ __all__ = [
     'processing',
     'io',
     'quantify',
-    'bayes',
     'viz']
 
 for x in __all__:
