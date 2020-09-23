@@ -49,6 +49,7 @@ setup(
     install_requires=[
         'numpy',
         'scipy',
+        'pandas',
         'hyperspy',
         'pymc3',
         'matplotlib',
