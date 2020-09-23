@@ -4,7 +4,7 @@ python:
 install:
 - pip install numpy scipy matplotlib tqdm hyperspy
 - pip install sphinx sphinx-rtd-theme
-- pip install --user .
+- pip install .
 script:
 - python -m unittest discover -p test*.py ./
 - sphinx-apidoc -fT -o ./pages ./SQuEELS/ ./SQuEELS/tests
