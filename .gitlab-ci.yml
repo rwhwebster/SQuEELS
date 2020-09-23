@@ -21,9 +21,7 @@ test:p3:
   artifacts:
       paths:
       - coverage.txt
-
-
-
+  allow_failure: true
 
 
 pages:
