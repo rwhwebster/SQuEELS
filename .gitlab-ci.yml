@@ -15,10 +15,9 @@ test:p3:
     # https://gitlab.com/rwebster/SQuEELS/-/settings/ci_cd#js-general-pipeline-settings
     # should work: ^TOTAL.+?(\d+\%)$
     # more specific: ^TOTAL\s+\d+\s+\d+\s+(\d+\%)$
-
-    artifacts:
-        paths:
-        - coverage.txt
+  artifacts:
+      paths:
+      - coverage.txt
 
 
 
